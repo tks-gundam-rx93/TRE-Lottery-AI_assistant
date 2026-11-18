@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TRE-Lottery AI Assistant | HARO-X3</title>
-/* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 <style>
+/* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
 :root{--bg:#050811;--cyan:#00e5ff;--green:#00ff66;--orange:#ff870e;--blue:#3475ff;--panel:rgba(5,15,30,.93);--border:rgba(0,229,255,.33)}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;color:#bfeeff;font:12px 'Courier New',monospace;background:linear-gradient(rgba(0,229,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.035) 1px,transparent 1px),var(--bg);background-size:20px 20px}
@@ -28,6 +28,29 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 .modal{display:none;position:fixed;inset:0;background:#01040bbb;z-index:100;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px)}.modal.open{display:flex}.window{width:min(520px,100%);max-height:90vh;overflow:auto;border:2px solid var(--cyan);box-shadow:0 0 28px #00e5ff50;background:linear-gradient(#10223b,#061122);border-radius:5px}.window-title{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#16344e;border-bottom:1px solid var(--cyan);color:white;font-weight:bold}.window-body{padding:12px;display:grid;gap:9px}.pattern{display:flex;gap:7px;align-items:center;padding:7px;background:#061529;border:1px solid #225474;border-radius:4px;flex-wrap:wrap}.pattern strong{color:var(--orange);font-size:11px;min-width:52px}.pattern .ballbox{display:flex;gap:4px;flex-wrap:wrap;flex:1}.pattern small{color:#77d2fb;font-size:9px}.legend{color:#9bbcd1;text-align:center;font-size:10px;line-height:1.8}.footer{text-align:center;color:#53778d;font-size:10px;padding:18px;border-top:1px solid #173048}
 /* TRE-UI: 小画面時のハロ・ボール等のサイズ調整。 */
 @media(max-width:500px){#pod-green{left:-14px;width:133px;height:156px}#pod-orange{left:7%;width:210px;height:235px}#pod-blue{right:-4%;width:193px;height:211px}.stage{height:260px}.main{padding:10px}.lotto-ball{width:30px;height:30px;font-size:11px}.pattern .lotto-ball{width:29px;height:29px}.panel h2{font-size:10px}.controls .btn{padding:9px 7px}}
+
+/* VOICE: 音声合成中のハロの目と耳だけを動作させる。速度は読み上げイベントで調整する。 */
+@keyframes haro-ear-talk {
+  0%,100% {transform:rotate(0deg) scaleY(1)}
+  25% {transform:rotate(-7deg) scaleY(.95)}
+  55% {transform:rotate(7deg) scaleY(1.06)}
+  80% {transform:rotate(-3deg) scaleY(.99)}
+}
+@keyframes haro-eye-talk {
+  0%,100% {transform:scaleY(1);opacity:1}
+  30% {transform:scaleY(.45);opacity:.70}
+  65% {transform:scaleY(1.18);opacity:1}
+}
+.haro .voice-eye {transform-box:fill-box;transform-origin:center;transition:filter .12s}
+.haro.speaking .ears {animation:haro-ear-talk .32s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.haro.speaking .voice-eye {animation:haro-eye-talk .24s ease-in-out infinite;filter:drop-shadow(0 0 8px #ff4dae)}
+.haro.speaking.voice-accent .ears {animation-duration:.17s}
+.haro.speaking.voice-accent .voice-eye {animation-duration:.13s;filter:drop-shadow(0 0 14px #ff75b6)}
+.voice-panel .voice-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.voice-panel .voice-actions .btn{flex:1;min-width:110px}
+.voice-panel .voice-actions label{display:inline-flex;align-items:center;gap:5px;color:#d8eefe;font-size:11px}
+.voice-panel .voice-state{margin-top:9px;line-height:1.7;font-size:11px;color:#bde5fc}
+.voice-panel .voice-description{margin-top:7px;color:#95acc7;font-size:10px;line-height:1.65}
 </style>
 </head>
 <body>
@@ -38,13 +61,13 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 <div class="haro-container">
 <!-- TRE-UI: 緑ハロはNEMESIS（批判・検証役）。 -->
 <button class="haro" id="pod-green" onclick="selectHaro('green')" title="NEMESIS" aria-label="NEMESISを選択">
-<svg viewBox="0 0 220 265" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g-body" cx="40%" cy="30%" r="75%"><stop stop-color="#7bffa2"/><stop offset=".55" stop-color="#2cad4d"/><stop offset="1" stop-color="#07371d"/></radialGradient><linearGradient id="g-metal"><stop stop-color="#4a5665"/><stop offset=".5" stop-color="#b5c6d4"/><stop offset="1" stop-color="#33475b"/></linearGradient></defs><path d="M30 191 Q110 226 190 191 L203 252 Q110 280 17 252Z" fill="url(#g-metal)" stroke="#0e1724" stroke-width="4"/><circle cx="110" cy="130" r="90" fill="url(#g-body)" stroke="#0a301a" stroke-width="4"/><path d="M31 123 L69 65 Q43 60 31 123 M189 123 L151 65 Q176 60 189 123" fill="#2c0d22"/><g class="ears"><ellipse cx="39" cy="34" rx="42" ry="14" transform="rotate(32 39 34)" fill="#22964d" stroke="#063919" stroke-width="3"/><ellipse cx="181" cy="34" rx="42" ry="14" transform="rotate(-32 181 34)" fill="#22964d" stroke="#063919" stroke-width="3"/></g><ellipse cx="86" cy="134" rx="8" ry="13" fill="#f46"/><ellipse cx="134" cy="134" rx="8" ry="13" fill="#f46"/><path d="M28 157 Q62 166 89 157 Q109 145 131 157 Q162 168 192 157" fill="none" stroke="#102b1a" stroke-width="4"/></svg><span class="tag">NEMESIS</span></button>
+<svg viewBox="0 0 220 265" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g-body" cx="40%" cy="30%" r="75%"><stop stop-color="#7bffa2"/><stop offset=".55" stop-color="#2cad4d"/><stop offset="1" stop-color="#07371d"/></radialGradient><linearGradient id="g-metal"><stop stop-color="#4a5665"/><stop offset=".5" stop-color="#b5c6d4"/><stop offset="1" stop-color="#33475b"/></linearGradient></defs><path d="M30 191 Q110 226 190 191 L203 252 Q110 280 17 252Z" fill="url(#g-metal)" stroke="#0e1724" stroke-width="4"/><circle cx="110" cy="130" r="90" fill="url(#g-body)" stroke="#0a301a" stroke-width="4"/><path d="M31 123 L69 65 Q43 60 31 123 M189 123 L151 65 Q176 60 189 123" fill="#2c0d22"/><g class="ears"><ellipse cx="39" cy="34" rx="42" ry="14" transform="rotate(32 39 34)" fill="#22964d" stroke="#063919" stroke-width="3"/><ellipse cx="181" cy="34" rx="42" ry="14" transform="rotate(-32 181 34)" fill="#22964d" stroke="#063919" stroke-width="3"/></g><ellipse cx="86" cy="134" rx="8" ry="13" fill="#f46" class="voice-eye"/><ellipse cx="134" cy="134" rx="8" ry="13" fill="#f46" class="voice-eye"/><path d="M28 157 Q62 166 89 157 Q109 145 131 157 Q162 168 192 157" fill="none" stroke="#102b1a" stroke-width="4"/></svg><span class="tag">NEMESIS</span></button>
 <!-- TRE-UI: 青ハロはCHAOS（探索・多様性重視）。 -->
 <button class="haro" id="pod-blue" onclick="selectHaro('blue')" title="CHAOS" aria-label="CHAOSを選択">
-<svg viewBox="0 0 220 265" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="b-body" cx="39%" cy="30%" r="75%"><stop stop-color="#72a0ff"/><stop offset=".55" stop-color="#1944b1"/><stop offset="1" stop-color="#07184e"/></radialGradient></defs><path d="M25 199 Q110 237 195 199 L206 257 Q110 278 13 257Z" fill="#8b9aa9" stroke="#142537" stroke-width="4"/><circle cx="110" cy="135" r="94" fill="url(#b-body)" stroke="#101a5c" stroke-width="4"/><path d="M26 125 L65 70 Q30 72 26 125 M194 125 L155 70 Q190 72 194 125" fill="#281330"/><g class="ears"><ellipse cx="36" cy="35" rx="42" ry="14" transform="rotate(37 36 35)" fill="#2b5bd1" stroke="#091e56" stroke-width="3"/><ellipse cx="184" cy="35" rx="42" ry="14" transform="rotate(-37 184 35)" fill="#2b5bd1" stroke="#091e56" stroke-width="3"/></g><ellipse cx="86" cy="138" rx="7" ry="13" fill="#ff2aaf"/><ellipse cx="134" cy="138" rx="7" ry="13" fill="#ff2aaf"/><circle cx="86" cy="136" r="3" fill="#ffe5f7"/><circle cx="134" cy="136" r="3" fill="#ffe5f7"/><path d="M25 167 Q60 177 90 168 Q110 155 130 168 Q160 177 195 167" fill="none" stroke="#0b1642" stroke-width="4"/></svg><span class="tag">CHAOS</span></button>
+<svg viewBox="0 0 220 265" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="b-body" cx="39%" cy="30%" r="75%"><stop stop-color="#72a0ff"/><stop offset=".55" stop-color="#1944b1"/><stop offset="1" stop-color="#07184e"/></radialGradient></defs><path d="M25 199 Q110 237 195 199 L206 257 Q110 278 13 257Z" fill="#8b9aa9" stroke="#142537" stroke-width="4"/><circle cx="110" cy="135" r="94" fill="url(#b-body)" stroke="#101a5c" stroke-width="4"/><path d="M26 125 L65 70 Q30 72 26 125 M194 125 L155 70 Q190 72 194 125" fill="#281330"/><g class="ears"><ellipse cx="36" cy="35" rx="42" ry="14" transform="rotate(37 36 35)" fill="#2b5bd1" stroke="#091e56" stroke-width="3"/><ellipse cx="184" cy="35" rx="42" ry="14" transform="rotate(-37 184 35)" fill="#2b5bd1" stroke="#091e56" stroke-width="3"/></g><ellipse cx="86" cy="138" rx="7" ry="13" fill="#ff2aaf" class="voice-eye"/><ellipse cx="134" cy="138" rx="7" ry="13" fill="#ff2aaf" class="voice-eye"/><circle cx="86" cy="136" r="3" fill="#ffe5f7"/><circle cx="134" cy="136" r="3" fill="#ffe5f7"/><path d="M25 167 Q60 177 90 168 Q110 155 130 168 Q160 177 195 167" fill="none" stroke="#0b1642" stroke-width="4"/></svg><span class="tag">CHAOS</span></button>
 <!-- TRE-UI: 橙ハロはLOGOS（統計・論理重視）。 -->
 <button class="haro selected" id="pod-orange" onclick="selectHaro('orange')" title="LOGOS" aria-label="LOGOSを選択">
-<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="o-body" cx="40%" cy="30%" r="76%"><stop stop-color="#ffd581"/><stop offset=".5" stop-color="#e48724"/><stop offset="1" stop-color="#8b3805"/></radialGradient><linearGradient id="o-metal"><stop stop-color="#455362"/><stop offset=".5" stop-color="#bdcad7"/><stop offset="1" stop-color="#3a414b"/></linearGradient></defs><path d="M25 210 Q120 250 215 210 L228 270 Q120 298 12 270Z" fill="url(#o-metal)" stroke="#101720" stroke-width="4"/><polygon points="105,238 135,238 142,269 98,269" fill="#a0a6ae" stroke="#20262c" stroke-width="3"/><circle cx="120" cy="144" r="98" fill="url(#o-body)" stroke="#361c08" stroke-width="4"/><path d="M22 131 Q32 76 76 63 L58 110Z M218 131 Q208 76 164 63 L183 110Z" fill="#350c22" stroke="#140513" stroke-width="3"/><path d="M46 104 Q75 81 82 99 M194 104 Q165 81 158 99" fill="none" stroke="#b7c1cb" stroke-width="9"/><g class="ears"><ellipse cx="39" cy="34" rx="44" ry="15" transform="rotate(35 39 34)" fill="#f09a2d" stroke="#56300b" stroke-width="3"/><ellipse cx="201" cy="34" rx="44" ry="15" transform="rotate(-35 201 34)" fill="#f09a2d" stroke="#56300b" stroke-width="3"/></g><ellipse cx="98" cy="143" rx="7" ry="13" fill="#771015"/><ellipse cx="142" cy="143" rx="7" ry="13" fill="#771015"/><circle cx="96" cy="140" r="3" fill="#ff7777"/><circle cx="140" cy="140" r="3" fill="#ff7777"/><path d="M22 169 Q65 179 91 168 Q120 153 149 168 Q176 179 218 169" fill="none" stroke="#281b10" stroke-width="4"/></svg><span class="tag">MAIN: LOGOS</span></button>
+<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="o-body" cx="40%" cy="30%" r="76%"><stop stop-color="#ffd581"/><stop offset=".5" stop-color="#e48724"/><stop offset="1" stop-color="#8b3805"/></radialGradient><linearGradient id="o-metal"><stop stop-color="#455362"/><stop offset=".5" stop-color="#bdcad7"/><stop offset="1" stop-color="#3a414b"/></linearGradient></defs><path d="M25 210 Q120 250 215 210 L228 270 Q120 298 12 270Z" fill="url(#o-metal)" stroke="#101720" stroke-width="4"/><polygon points="105,238 135,238 142,269 98,269" fill="#a0a6ae" stroke="#20262c" stroke-width="3"/><circle cx="120" cy="144" r="98" fill="url(#o-body)" stroke="#361c08" stroke-width="4"/><path d="M22 131 Q32 76 76 63 L58 110Z M218 131 Q208 76 164 63 L183 110Z" fill="#350c22" stroke="#140513" stroke-width="3"/><path d="M46 104 Q75 81 82 99 M194 104 Q165 81 158 99" fill="none" stroke="#b7c1cb" stroke-width="9"/><g class="ears"><ellipse cx="39" cy="34" rx="44" ry="15" transform="rotate(35 39 34)" fill="#f09a2d" stroke="#56300b" stroke-width="3"/><ellipse cx="201" cy="34" rx="44" ry="15" transform="rotate(-35 201 34)" fill="#f09a2d" stroke="#56300b" stroke-width="3"/></g><ellipse cx="98" cy="143" rx="7" ry="13" fill="#771015" class="voice-eye"/><ellipse cx="142" cy="143" rx="7" ry="13" fill="#771015" class="voice-eye"/><circle cx="96" cy="140" r="3" fill="#ff7777"/><circle cx="140" cy="140" r="3" fill="#ff7777"/><path d="M22 169 Q65 179 91 168 Q120 153 149 168 Q176 179 218 169" fill="none" stroke="#281b10" stroke-width="4"/></svg><span class="tag">MAIN: LOGOS</span></button>
 </div></section>
 <!-- TRE-UI: 各機能の表示パネル。データ解析・判定の出力先を含む。 -->
 <main class="main">
@@ -52,6 +75,24 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 <section class="panel"><h2>SYSTEM TELEMETRY <small id="telemetry-clock">--:--:--</small></h2><div class="telemetry"><div class="meter"><label>API STATUS</label><strong id="api-val">—</strong><div class="bar"></div></div><div class="meter"><label>CSV HISTORY</label><strong id="hist-val">—</strong><div class="bar"></div></div><div class="meter"><label>MLP TRAIN</label><strong id="mlp-val">—</strong><div class="bar"></div></div><div class="meter"><label>API LATENCY</label><strong id="ping-val">—</strong><div class="bar"></div></div></div></section>
 <!-- TRE-UI: 予測対象と実行ボタン。現時点の予測機能はLOTO7のみ対応。 -->
 <section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（未実装）</option><option value="numbers4">NUMBERS4（未実装）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
+
+<!-- VOICE: ブラウザのマイク許可を得て「おーい、ハロ」を待ち受ける。 -->
+<section class="panel voice-panel" aria-labelledby="voice-heading">
+  <h2 id="voice-heading">HARO VOICE LINK <small>WAKE WORD / おーい、ハロ</small></h2>
+  <div class="voice-actions">
+    <button class="btn orange" id="voice-mic-btn" onclick="voiceAssistant.toggle()" type="button">マイクON</button>
+    <button class="btn" id="voice-wake-btn" onclick="voiceAssistant.wakeByTap()" type="button">ハロ起動（タップ）</button>
+    <button class="btn" id="voice-stop-btn" onclick="voiceAssistant.stopSpeech()" type="button">音声停止</button>
+    <label><input type="checkbox" id="voice-output" checked> 音声応答ON</label>
+  </div>
+  <div class="voice-state" id="voice-status" role="status" aria-live="polite">マイクONを押して許可後、「おーい、ハロ」と呼びかけてください。</div>
+  <div class="voice-description">
+    起動時の第一声：「タカシ、元気か？」。発話中のハロだけ目と耳が動きます。
+    Chrome等の音声認識対応ブラウザ／HTTPSで動作。非対応時は「ハロ起動（タップ）」を使用してください。
+    音声認識はブラウザ機能を利用します（常時バックグラウンド待受は不可）。
+  </div>
+</section>
+
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
 <section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1,n2,n3,n4,n5,n6,n7（b1,b2は任意）。自動Web取得は行いません。</div></section>
 <!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
@@ -85,7 +126,7 @@ function ball(n){const el=document.createElement('span');el.className='lotto-bal
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
 const agentNames={orange:'LOGOS',blue:'CHAOS',green:'NEMESIS'};
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
-function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',blue:'多様な候補の探索を担当します。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id])}
+function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',blue:'多様な候補の探索を担当します。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
 /** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
 function openLoto7Modal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('loto7-modal').classList.add('open')}
 /** TRE-UI: モーダルを閉じ、メイン画面へ復帰。 */
@@ -93,7 +134,7 @@ function closeLoto7Modal(){$('loto7-modal').classList.remove('open')}
 /** TRE-UI: APIレスポンスから候補番号・抽出法・投票数・モデル評価・3AI再判定を描画。 */
 function renderPrediction(d){currentData=d;const modal=$('loto7-5patterns-container');const bar=$('lottery-result-area');modal.replaceChildren();bar.replaceChildren();d.candidates.forEach((c,i)=>{const row=document.createElement('div');row.className='pattern';const name=document.createElement('strong');name.textContent='SET-'+String(i+1).padStart(2,'0');const balls=document.createElement('div');balls.className='ballbox';c.numbers.forEach(n=>balls.appendChild(ball(n)));const hint=document.createElement('small');hint.textContent=c.method+' / '+c.votes+'票';row.append(name,balls,hint);modal.appendChild(row)});if(d.candidates.length){const label=document.createElement('span');label.textContent='SET-01: ';label.style.color='var(--orange)';bar.appendChild(label);d.candidates[0].numbers.forEach(n=>bar.appendChild(ball(n)))}const demo=d.mode==='SYNTHETIC_DEMO';const mode=document.createElement('span');mode.textContent=demo?' [架空データのデモ]':' [CSV第'+d.last_draw+'回まで]';mode.style.color=demo?'#ffc078':'#00ffcc';bar.appendChild(mode);$('hist-val').textContent=demo?'DEMO':d.history_count+'回';$('mlp-val').textContent=d.training?'DONE':'N/A';$('modal-timestamp').textContent=(demo?'DEMO':'CSV')+' / '+new Date(d.generated_at).toLocaleTimeString('ja-JP');const lines=['■ データ種別: '+(demo?'架空160回（動作テスト）':'ユーザーCSV '+d.history_count+'回'),'■ 深層学習: '+(d.training?d.training.method+' 検証BCE='+d.training.validation_bce+' / ランダム基準BCE='+d.training.random_baseline_bce:'履歴不足'),'■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース（LLMではありません）'),''];for(const v of d.debate.first_round)lines.push('独立判定 '+v.agent+': '+v.candidate_id+' / '+v.reason);lines.push('');for(const v of d.debate.second_round)lines.push('反論・再判定 '+v.agent+': '+v.candidate_id+' / '+v.critique);lines.push('','最終支持: '+d.debate.winner_id,'',d.warning);$('ai-verdict-details').textContent=lines.join('\n');addLog('orange','[3AI] '+(demo?'架空履歴を使用したデモ。':'ユーザーCSVを使用。')+'予測候補を検証しました。');for(const v of d.debate.second_round)addLog(v.agent==='LOGOS'?'orange':v.agent==='NEMESIS'?'green':'blue','['+v.agent+'] '+v.candidate_id+'を支持: '+v.reason)}
 /** TRE-UI: POST /api/predictで5通りを生成。通信中の二重実行を防ぎ、失敗時はエラー表示。 */
-async function scanLottery(){const game=$('lottery-select').value;if(game!=='loto7'){$('lottery-result-area').textContent=game==='none'?'抽せん種別を選択してください。':'現在はLOTO7のみ実装済みです。';return}const btn=$('scan-btn');btn.disabled=true;setStatus('ANALYZING...',true);$('lottery-result-area').textContent='統計解析・MLP学習・3AI判定中...';const start=performance.now();try{const response=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:5,samples:180,seed:Math.floor(Math.random()*1000000),session:activeSession,judge:'rules'})});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);renderPrediction(d);setStatus(d.mode==='SYNTHETIC_DEMO'?'ONLINE / DEMO':'ONLINE / CSV',true);$('ping-val').textContent=Math.round(performance.now()-start)+'ms';openLoto7Modal()}catch(e){setStatus('API ERROR',false);$('lottery-result-area').textContent='予測エラー: '+e.message;addLog('green','[ERROR] '+e.message)}finally{btn.disabled=false}}
+async function scanLottery(){const game=$('lottery-select').value;if(game!=='loto7'){$('lottery-result-area').textContent=game==='none'?'抽せん種別を選択してください。':'現在はLOTO7のみ実装済みです。';return}const btn=$('scan-btn');btn.disabled=true;setStatus('ANALYZING...',true);$('lottery-result-area').textContent='統計解析・MLP学習・3AI判定中...';const start=performance.now();try{const response=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:5,samples:180,seed:Math.floor(Math.random()*1000000),session:activeSession,judge:'rules'})});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);renderPrediction(d);setStatus(d.mode==='SYNTHETIC_DEMO'?'ONLINE / DEMO':'ONLINE / CSV',true);$('ping-val').textContent=Math.round(performance.now()-start)+'ms';openLoto7Modal();if(voiceAssistant.awake&&d.candidates.length){const top=d.candidates[0].numbers.map(String).join('、');haroSpeech.say('ロトセブン、予測完了だぞ！ 第1候補は、'+top+'。ハロ！',currentHaro)}}catch(e){setStatus('API ERROR',false);$('lottery-result-area').textContent='予測エラー: '+e.message;addLog('green','[ERROR] '+e.message)}finally{btn.disabled=false}}
 /** TRE-UI: くじ種別変更時の案内を更新。LOTO6とNUMBERS4は未実装。 */
 function onLotteryChange(){$('lottery-result-area').textContent=$('lottery-select').value==='loto7'?'LOTO7を選択中。SCANで予測します。':'現在はLOTO7のみ実装済みです。'}
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
@@ -101,8 +142,305 @@ async function uploadCsv(){const input=$('csv-input'),status=$('csv-status');if(
 /** TRE-UI: CSVセッションを解除し、架空履歴のデモモードに戻す。 */
 function resetDemo(){activeSession=null;sessionStorage.removeItem('tre_loto7_session');$('csv-status').textContent='架空の抽せん履歴で動作デモを実行します。';$('hist-val').textContent='DEMO';addLog('orange','[MODE] デモに戻しました。')}
 /** TRE-UI: メッセージを操作コマンドとして解釈。自由会話LLMには接続しない。 */
-function sendChatMessage(){const input=$('chat-input');const text=input.value.trim();if(!text)return;input.value='';addLog('user',text);if(/ロト7|LOTO7|予測|予想|5通り|SCAN/i.test(text))scanLottery();else if(/CSV|データ/i.test(text))addLog('green','CSV取込欄から draw_no,draw_date,n1〜n7 形式のファイルを指定してください。');else if(/AI|判定|討論/i.test(text))addLog('blue','SCAN後に3AI REVIEW欄へ独立判定と再判定が表示されます。');else addLog('orange','現在のチャットは操作支援用です。自由会話型LLMには接続していません。')}
+function sendChatMessage(){const input=$('chat-input');const message=input.value.trim();if(!message)return;input.value='';addLog('user',message);return dispatchHaroCommand(message)}
 /** TRE-UI: 画面ロード時に時計、/api/health、履歴セッションの状態を初期化。 */
+
+/**
+ * 音声合成コントローラー。
+ * - Web Speech APIの日本語TTSを使い、ロボット風の短い語尾とピッチで読み上げる。
+ * - onboundary（語句境界）が来るたびに発話中のハロを強調し、目・耳のアニメ速度を上げる。
+ * - ブラウザTTSのPCM音声波形は直接取得できないため、振幅との完全同期ではなく
+ *   発話時間および語句境界に基づく近似同期とする。
+ */
+class HaroSpeechController {
+  constructor(){
+    this.synth=('speechSynthesis' in window)?window.speechSynthesis:null;
+    this.speaking=false;
+    this.activeId=null;
+    this.utterance=null;
+    this.accentTimer=null;
+    this.sequence=0;
+  }
+  _setFace(id,enabled){
+    const el=$('pod-'+id);
+    if(!el)return;
+    el.classList.toggle('speaking',enabled);
+    if(!enabled)el.classList.remove('voice-accent');
+  }
+  _accent(id){
+    const el=$('pod-'+id);
+    if(!el)return;
+    el.classList.add('voice-accent');
+    clearTimeout(this.accentTimer);
+    this.accentTimer=setTimeout(()=>el.classList.remove('voice-accent'),140);
+  }
+  cancel(){
+    this.sequence++;
+    if(this.synth)this.synth.cancel();
+    clearTimeout(this.accentTimer);
+    if(this.activeId)this._setFace(this.activeId,false);
+    this.activeId=null;
+    this.speaking=false;
+  }
+  /**
+   * 指定ハロが読み上げる。Promiseは読み上げが終了または中止されたら解決する。
+   * 音声出力OFF・非対応ブラウザでは表示のみに切り替える。
+   */
+  async say(text,id='orange'){
+    if(!$('voice-output')?.checked)return false;
+    if(!this.synth||typeof SpeechSynthesisUtterance==='undefined'){
+      voiceAssistant.setState('このブラウザでは音声合成に対応していません。');
+      return false;
+    }
+    this.cancel();
+    const token=this.sequence;
+    this.speaking=true; // 認識が自分の発話を再取得しないよう、合成開始前にマイクを一時停止
+    voiceAssistant.pauseForSpeech();
+    this.activeId=id;
+    return new Promise(resolve=>{
+      const utterance=new SpeechSynthesisUtterance(text);
+      this.utterance=utterance;
+      utterance.lang='ja-JP';
+      // キャラクターの「短く元気なロボット調」を再現。特定の声優音声の複製はしない。
+      const profiles={orange:[1.12,1.35],blue:[1.02,1.12],green:[.98,1.22]};
+      [utterance.rate,utterance.pitch]=profiles[id]||profiles.orange;
+      utterance.volume=1;
+      const voices=this.synth.getVoices();
+      const ja=voices.find(v=>v.lang?.toLowerCase()==='ja-jp')
+        || voices.find(v=>v.lang?.toLowerCase().startsWith('ja'));
+      if(ja)utterance.voice=ja;
+      let finished=false;
+      const cleanup=()=>{
+        if(finished)return;
+        finished=true;
+        if(token===this.sequence){
+          this._setFace(id,false);
+          this.activeId=null;
+          this.speaking=false;
+          this.utterance=null;
+          voiceAssistant.resumeAfterSpeech();
+        }
+        resolve(true);
+      };
+      utterance.onstart=()=>{
+        if(token!==this.sequence)return;
+        this._setFace(id,true);
+        voiceAssistant.setState('発話中：'+agentNames[id]+'（目と耳が連動）');
+      };
+      utterance.onboundary=()=>{
+        if(token===this.sequence)this._accent(id);
+      };
+      utterance.onend=cleanup;
+      utterance.onerror=cleanup;
+      try{this.synth.speak(utterance)}catch(error){
+        voiceAssistant.setState('音声出力エラー: '+error.message);
+        cleanup();
+      }
+    });
+  }
+}
+
+/**
+ * 音声認識状態管理。
+ * ブラウザの制約で初回はマイクボタンによるユーザー操作が必要。
+ * 認識文字列に「おーい、ハロ」が含まれた時だけ起動して初回挨拶を発話する。
+ * 自分のTTSがマイクに入って誤認識しないよう発話中は認識を止める。
+ */
+class HaroVoiceAssistant {
+  constructor(){
+    this.Recognition=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+    this.enabled=false;
+    this.awake=false;
+    this.listening=false;
+    this.processing=false;
+    this.paused=false;
+    this.restartTimer=null;
+    this.recognition=null;
+  }
+  setState(text){
+    $('voice-status').textContent=text;
+  }
+  _updateButton(){
+    const button=$('voice-mic-btn');
+    button.textContent=this.enabled?'マイクOFF':'マイクON';
+    button.setAttribute('aria-pressed',String(this.enabled));
+  }
+  /**
+   * 誤検出を抑えるため句読点と長音を取り除いて「おいハロ」を検査する。
+   */
+  isWakeWord(text){
+    const compact=String(text).normalize('NFKC').replace(/[\s　、。,.!！?？ー〜～]/g,'');
+    return /(?:おい|オイ)(?:ハロ|はろ)/.test(compact);
+  }
+  toggle(){
+    if(this.enabled){this.disable();return}
+    if(!this.Recognition){
+      this.setState('音声認識に非対応です。Chromeで開くか「ハロ起動（タップ）」を押してください。');
+      return;
+    }
+    this.enabled=true;
+    this.awake=false;
+    this.paused=false;
+    this._updateButton();
+    this.setState('待機中。マイクを許可し、「おーい、ハロ」と呼びかけてください。');
+    this.startListening();
+  }
+  disable(){
+    this.enabled=false;
+    this.awake=false;
+    this.paused=false;
+    clearTimeout(this.restartTimer);
+    if(this.recognition){try{this.recognition.abort()}catch(e){}}
+    this.listening=false;
+    this._updateButton();
+    this.setState('マイクOFF。ハロ起動（タップ）でも応答できます。');
+  }
+  startListening(){
+    if(!this.enabled||this.paused||this.processing||this.listening||haroSpeech.speaking)return;
+    if(!this.recognition){
+      this.recognition=new this.Recognition();
+      this.recognition.lang='ja-JP';
+      this.recognition.continuous=false;
+      this.recognition.interimResults=false;
+      this.recognition.maxAlternatives=1;
+      this.recognition.onstart=()=>{
+        this.listening=true;
+        this.setState(this.awake?'音声指示を待っています。':'「おーい、ハロ」を待っています。');
+      };
+      this.recognition.onresult=(event)=>{
+        const text=event.results?.[0]?.[0]?.transcript?.trim();
+        if(!text)return;
+        this.processing=true;
+        this._process(text).catch(e=>this.setState('指示エラー: '+e.message)).finally(()=>{
+          this.processing=false;
+          this.scheduleRestart();
+        });
+      };
+      this.recognition.onerror=(event)=>{
+        this.listening=false;
+        if(['not-allowed','service-not-allowed','audio-capture'].includes(event.error)){
+          this.disable();
+          this.setState('マイクが利用できません（'+event.error+'）。ブラウザの権限を確認してください。');
+        }else if(event.error!=='aborted'&&event.error!=='no-speech'){
+          this.setState('音声認識: '+event.error+'。タップ操作でも利用できます。');
+        }
+      };
+      this.recognition.onend=()=>{
+        this.listening=false;
+        this.scheduleRestart();
+      };
+    }
+    try{this.recognition.start()}catch(e){
+      // recognition.start()の二重呼び出しや権限拒否を処理する。
+      if(e.name!=='InvalidStateError'){
+        this.setState('マイクを開始できません: '+e.message);
+      }
+    }
+  }
+  scheduleRestart(){
+    clearTimeout(this.restartTimer);
+    if(!this.enabled||this.paused||this.processing||haroSpeech.speaking)return;
+    this.restartTimer=setTimeout(()=>this.startListening(),500);
+  }
+  pauseForSpeech(){
+    this.paused=true;
+    clearTimeout(this.restartTimer);
+    if(this.recognition){try{this.recognition.abort()}catch(e){}}
+    this.listening=false;
+  }
+  resumeAfterSpeech(){
+    this.paused=false;
+    if(!this.enabled)return;
+    this.scheduleRestart();
+  }
+  async _process(text){
+    addLog('user','[音声] '+text);
+    if(this.isWakeWord(text)){
+      if(!this.awake){
+        await this.wake();
+      }else{
+        await haroSpeech.say('ハロ！聞こえてるぞ！','orange');
+      }
+      return;
+    }
+    if(!this.awake){
+      this.setState('起動前です。「おーい、ハロ」と呼びかけてください。');
+      return;
+    }
+    await dispatchHaroCommand(text);
+  }
+  /**
+   * 最初の応答は必ず指定された文言とし、余分な前置きは挟まない。
+   */
+  async wake(){
+    if(this.awake)return;
+    this.awake=true;
+    currentHaro='orange';
+    document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));
+    $('pod-orange').classList.add('selected');
+    $('active-agent-title').textContent='3-AI COMMS TERMINAL [MAIN: LOGOS]';
+    addLog('orange','[ハロ] タカシ、元気か？');
+    await haroSpeech.say('タカシ、元気か？','orange');
+    if(!haroSpeech.synth||!$('voice-output').checked)this.setState('ハロ起動済み。音声出力設定とブラウザ対応をご確認ください。');
+  }
+  wakeByTap(){
+    this.wake(); // 音声認識が使えない環境でも操作で起動できる
+  }
+  stopSpeech(){
+    this.readCycle++;
+    haroSpeech.cancel();
+    this.setState('読み上げを停止しました。');
+    this.resumeAfterSpeech();
+  }
+}
+
+/**
+ * チャット入力・音声認識から共通で呼ばれるコマンドルータ。
+ * 自然言語の対象はロト7予測・3AI判定読み上げ・CSV操作ガイドに限定。
+ */
+async function dispatchHaroCommand(text){
+  if(voiceAssistant.isWakeWord(text)){
+    await voiceAssistant.wake();
+  }else if(/停止|止めて|ストップ|静かに/.test(text)){
+    voiceAssistant.stopSpeech();
+  }else if(/3AI|3エーアイ|判定|討論|議論|読み上げ/.test(text)){
+    await readDebateAloud();
+  }else if(/ロト7|LOTO7|予測|予想|5通り|SCAN/i.test(text)){
+    await scanLottery();
+  }else if(/CSV|データ|取り込み/.test(text)){
+    addLog('green','[ハロ] CSVは取込欄から選ぶんだぞ。');
+    if(voiceAssistant.awake)await haroSpeech.say('CSVは取込欄から選ぶんだぞ。','green');
+  }else{
+    addLog('orange','[ハロ] ロト7の予測か、3AI判定って言ってくれよな！');
+    if(voiceAssistant.awake)await haroSpeech.say('ロト7の予測か、3AI判定って言ってくれよな！','orange');
+  }
+}
+
+/** 3AIの判定を別々のハロに順番に読み上げさせる。 */
+async function readDebateAloud(){
+  if(!currentData){
+    addLog('orange','[ハロ] 先にSCANで番号を出してくれよな！');
+    if(voiceAssistant.awake)await haroSpeech.say('先にスキャンしてくれよな！','orange');
+    return;
+  }
+  if(!voiceAssistant.awake){
+    addLog('orange','音声を使うときは「おーい、ハロ」で起動してください。');
+    return;
+  }
+  const haroByAgent={LOGOS:'orange',CHAOS:'blue',NEMESIS:'green'};
+  // 発話中に「音声停止」が押されたら残りのハロを発話させない。
+  const cycle=++voiceAssistant.readCycle;
+  for(const verdict of currentData.debate.second_round){
+    if(voiceAssistant.readCycle!==cycle)break;
+    const speaker=haroByAgent[verdict.agent];
+    if(!speaker)continue;
+    await haroSpeech.say(verdict.agent+'だぞ。'+verdict.candidate_id+'を支持するぞ。'+verdict.reason,speaker);
+  }
+}
+const haroSpeech=new HaroSpeechController();
+const voiceAssistant=new HaroVoiceAssistant();
+voiceAssistant.readCycle=0;
+
 window.addEventListener('DOMContentLoaded',async()=>{const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');tick();setInterval(tick,1000);try{const res=await fetch('/api/health');if(!res.ok)throw Error('HTTP '+res.status);setStatus('ONLINE / READY',true);$('api-val').textContent='READY';$('hist-val').textContent=activeSession?'SESSION':'DEMO';$('mlp-val').textContent='READY'}catch(e){setStatus('OFFLINE',false);$('api-val').textContent='ERROR'}if(activeSession)$('csv-status').textContent='CSVセッションを復元しました。有効期限は1時間です。'});
 </script>
 </body></html>
