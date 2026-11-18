@@ -586,9 +586,15 @@ class HaroSpeechController {
         || voices.find(v=>v.lang?.toLowerCase().startsWith('ja'));
       if(ja)utterance.voice=ja;
       let finished=false;
+      let started=false;
+      let startGuard=null;
+      // onstartの通知が遅いブラウザでも、試聴ボタンの直後から耳・目を可動させる。
+      this._setFace(id,true);
+      this._startCadence(utterance.rate);
       const cleanup=()=>{
         if(finished)return;
         finished=true;
+        clearTimeout(startGuard);
         if(token===this.sequence){
           clearInterval(this.pulseTimer);
           this.pulseTimer=null;
@@ -601,7 +607,9 @@ class HaroSpeechController {
         resolve(true);
       };
       utterance.onstart=()=>{
-        if(token!==this.sequence)return;
+        if(token!==this.sequence||finished)return;
+        started=true;
+        clearTimeout(startGuard);
         this._setFace(id,true);
         this._startCadence(utterance.rate);
         this._chirp();
@@ -614,6 +622,14 @@ class HaroSpeechController {
       };
       utterance.onend=cleanup;
       utterance.onerror=cleanup;
+      // 自動再生がブロックされた場合、目と耳のデモ動作を無限に継続しない。
+      // OS音声が取得できない環境では実音声を出したと誤表示しない。
+      startGuard=setTimeout(()=>{
+        if(finished||started||token!==this.sequence)return;
+        voiceAssistant.setState('音声合成を開始できません。OSの日本語音声とブラウザ設定を確認してください。');
+        try{this.synth.cancel()}catch(e){}
+        cleanup();
+      },3500);
       try{this.synth.speak(utterance)}catch(error){
         voiceAssistant.setState('音声出力エラー: '+error.message);
         cleanup();
