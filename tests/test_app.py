@@ -53,3 +53,16 @@ def test_expired_session_rejected():
 
 def test_invalid_bounds():
     assert client.post('/api/predict', json={'count': 999}).status_code == 422
+
+def test_haro_approved_artwork_is_served():
+    """承認画像をFastAPIで直接配信し、開閉アセットが存在することを検証。"""
+    for name in ("haro-approved.webp", "haro-open.webp", "haro-closed-stage.webp"):
+        response = client.get("/assets/" + name)
+        assert response.status_code == 200
+        assert response.content[:4] == b"RIFF"
+        assert response.content[8:12] == b"WEBP"
+    html = client.get("/")
+    assert html.status_code == 200
+    assert 'src="/assets/haro-approved.webp"' in html.text
+    assert 'id="pod-purple"' in html.text
+    assert 'id="pod-blue"' not in html.text
