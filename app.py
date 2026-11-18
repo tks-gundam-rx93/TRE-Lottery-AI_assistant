@@ -19,6 +19,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from lottery_ai.agents import OpenAICompatibleClient, ThreeAgentDebate
@@ -154,6 +155,9 @@ class PredictionService:
 
 service = PredictionService()
 app = FastAPI(title='TRE-Lottery AI Assistant', version='0.1.0')
+
+# 承認済みハロ画像をWeb用静的ファイルとして提供する。APIとは独立した読取専用配信。
+app.mount('/assets', StaticFiles(directory=Path(__file__).parent / 'web' / 'assets'), name='assets')
 
 
 @app.get('/')
