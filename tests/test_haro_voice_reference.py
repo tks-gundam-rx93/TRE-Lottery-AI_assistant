@@ -1,43 +1,41 @@
-"""録画を参考にしたハロ風音声・可動ハッチの回帰テスト。
-
-ブラウザ音声の直接録音はCIで実行できないため、UI構造と実行経路を検証する。
-"""
+"""承認された開閉画像と音声連動の回帰テスト（外部マイク・TTSに依存しない）。"""
 from pathlib import Path
-import re
 
 UI = Path(__file__).resolve().parents[1] / "web" / "index.html"
 
 
-def test_reference_style_hatches_all_three_units():
+def test_artwork_open_closed_uses_approved_frames():
+    """承認デザインの画像を開閉状態に使用し、物理ヒンジの実装と偽らない。"""
     source = UI.read_text(encoding="utf-8")
-    assert source.count('class="ear-hatch ear-hatch-left"') == 3
-    assert source.count('class="ear-hatch ear-hatch-right"') == 3
-    assert source.count('class="ear-interior ear-interior-left"') == 3
-    assert source.count('class="ear-interior ear-interior-right"') == 3
-    assert source.count('class="haro-head-assembly"') == 3
-    assert source.count('class="voice-eye"') == 6
+    assert source.count('src="/assets/haro-approved.webp"') == 1
+    assert source.count('src="/assets/haro-closed-stage.webp"') == 1
+    assert "transition:opacity .68s" in source
+    assert "class=\"haro-art-stage ears-open\"" in source
+    assert 'id="haro-ear-state"' in source
+    assert "EAR STATE: " in source
 
 
-def test_hinge_rotates_each_side_and_has_audio_fallback():
+def test_voice_timing_moves_reference_art():
+    """Web Speech発話開始・境界・終了で開耳画像と目の発光を制御する。"""
     source = UI.read_text(encoding="utf-8")
-    for rule in (
-        "@keyframes haro-hatch-left",
-        "@keyframes haro-hatch-right",
-        "@keyframes haro-head-motion",
-        "@keyframes haro-eye-talk",
-        ".haro.speaking .ear-hatch-left",
-        ".haro.speaking .ear-hatch-right",
-        ".haro.speaking .haro-head-assembly",
-        ".haro.speaking .voice-eye",
+    for required in (
+        "utterance.onstart",
         "utterance.onboundary",
+        "utterance.onend",
         "_startCadence(rate)",
         "clearInterval(this.pulseTimer)",
-        "@media(prefers-reduced-motion:reduce)",
+        "this._setFace(id,true)",
+        "this._setFace(id,false)",
+        "setHaroArtSpeaking(id,enabled)",
+        "data-speaker=\"orange\"",
+        "data-speaker=\"purple\"",
+        "data-speaker=\"green\"",
     ):
-        assert rule in source
+        assert required in source
 
 
-def test_voice_tuning_controls_and_local_storage():
+def test_speech_settings_and_original_effects():
+    """発表用の音声ピッチ・話速と電子音の設定を保持する。"""
     source = UI.read_text(encoding="utf-8")
     for ident in ("voice-pitch", "voice-rate", "voice-chirp", "voice-pitch-label", "voice-rate-label"):
         assert source.count(f'id="{ident}"') == 1
@@ -51,18 +49,5 @@ def test_voice_tuning_controls_and_local_storage():
         "new SpeechSynthesisUtterance",
         "let startGuard=null;",
         "3500",
-        "this._setFace(id,true);",
     ):
         assert method in source
-    assert "haroSpeech.armAudio();" in source
-    assert "haroSpeech.restoreSettings();" in source
-    assert "startupMessage" in source
-
-
-def test_css_svg_open_and_close_are_independent():
-    """耳は左右で反対方向に動き、耳内の機構は閉鎖時にはハッチに覆われる。"""
-    source = UI.read_text(encoding="utf-8")
-    assert re.search(r"@keyframes haro-hatch-left[\s\S]*?rotate\(71deg\)", source)
-    assert re.search(r"@keyframes haro-hatch-right[\s\S]*?rotate\(-73deg\)", source)
-    assert ".haro .ear-hatch-left{transform-origin:62px 83px}" in source
-    assert ".haro .ear-hatch-right{transform-origin:178px 83px}" in source
