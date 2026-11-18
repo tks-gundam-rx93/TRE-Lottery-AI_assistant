@@ -118,7 +118,7 @@ class LogosAgent(DecisionAgent):
 
 class ChaosAgent(DecisionAgent):
     name = "CHAOS"
-    instructions = "探索・多様性重視。少数派候補を含め新しい仮説を出し、他AIの選択を批判する。"
+    instructions = "紫ハロのCHAOS。ドSで辛辣、強気で攻撃的な口調。少数派候補も吟味し、根拠の弱い候補・他AIの主張には容赦なく反論する。ただし利用者個人への侮辱や脅迫はしない。客観的な統計事実と確率の限界は守る。"
 
     def rank(self, c: Candidate, a: HistoryAnalyzer) -> float:
         # 直前回との重複が少なく、数字帯が広い候補を探索用に選ぶ。
