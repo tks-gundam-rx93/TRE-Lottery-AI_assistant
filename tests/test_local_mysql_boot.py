@@ -100,7 +100,7 @@ def test_mysql_api_integration_without_real_db(monkeypatch):
 def test_bootscreen_only_and_exact_first_message():
     """ユーザー操作までメインUIを隠し、指定文言を初回の発話に使う。"""
     html = (Path(__file__).resolve().parents[1] / "web" / "index.html").read_text(encoding="utf-8")
-    phrase = "3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・ブルー、同期完了"
+    phrase = "3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・パープル、同期完了"
     assert '<body class="boot-locked">' in html
     assert 'id="boot-screen"' in html
     assert 'id="boot-launch"' in html
