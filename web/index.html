@@ -64,9 +64,22 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 .voice-panel .voice-actions label{display:inline-flex;align-items:center;gap:5px;color:#d8eefe;font-size:11px}
 .voice-panel .voice-state{margin-top:9px;line-height:1.7;font-size:11px;color:#bde5fc}
 .voice-panel .voice-description{margin-top:7px;color:#95acc7;font-size:10px;line-height:1.65}
+
+/* BOOT: ページ初回表示は起動ボタンだけ。ユーザー操作後にHUDを開放する。 */
+body.boot-locked {overflow:hidden;}
+body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
+#boot-screen{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center,#142f50 0%,#071522 48%,#02050c 100%);}
+#boot-screen.boot-finished{display:none !important}
+#boot-launch{display:block;padding:23px 38px;border:2px solid var(--cyan);border-radius:12px;background:linear-gradient(135deg,#0d374d,#142841);color:#ecffff;font-size:clamp(18px,5vw,30px);font-weight:900;letter-spacing:.1em;box-shadow:0 0 20px rgba(0,229,255,.46),inset 0 0 17px #00e5ff30;cursor:pointer;transition:transform .2s,box-shadow .2s}
+#boot-launch:hover{transform:scale(1.045);box-shadow:0 0 34px rgba(0,229,255,.72)}
+#boot-launch:focus-visible{outline:3px solid #fff;outline-offset:5px}
 </style>
 </head>
-<body>
+<body class="boot-locked">
+<!-- BOOT: 起動前に表示する唯一のUI。音声自動再生制約を避けるため、ボタン操作を起動契機とする。 -->
+<div id="boot-screen" role="region" aria-label="AIハロ起動画面">
+  <button type="button" id="boot-launch" onclick="bootHaroSystem()">AIハロ起動</button>
+</div>
 <!-- TRE-UI: ステータスはAPI接続／解析状況に応じてJavaScriptから更新。 -->
 <header><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
@@ -221,7 +234,7 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 </section>
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
-<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1,n2,n3,n4,n5,n6,n7（b1,b2は任意）。自動Web取得は行いません。</div></section>
+<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1,n2,n3,n4,n5,n6,n7（b1,b2は任意）。自動Web取得は行いません。</div></section>
 <!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
 <section class="panel"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
@@ -240,6 +253,9 @@ let activeSession=sessionStorage.getItem('tre_loto7_session')||null;
 let currentData=null;
 /** TRE-UI: 現在選択中のハロの色を保持。 */
 let currentHaro='orange';
+/** ローカルMySQL・デモの接続状態を画面に表示するための情報。 */
+let dbBackend='memory';
+let systemBooted=false;
 /** TRE-UI: 要素IDからDOMを取得する簡易ヘルパー。 */
 const $=id=>document.getElementById(id);
 /** TRE-UI: サーバー・処理状態を表示するバッジを更新。 */
@@ -265,9 +281,22 @@ async function scanLottery(){const game=$('lottery-select').value;if(game!=='lot
 /** TRE-UI: くじ種別変更時の案内を更新。LOTO6とNUMBERS4は未実装。 */
 function onLotteryChange(){$('lottery-result-area').textContent=$('lottery-select').value==='loto7'?'LOTO7を選択中。SCANで予測します。':'現在はLOTO7のみ実装済みです。'}
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
-async function uploadCsv(){const input=$('csv-input'),status=$('csv-status');if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}const file=input.files[0];if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}status.textContent='CSVを検証中...';try{const response=await fetch('/api/history/upload',{method:'POST',headers:{'content-type':'text/csv'},body:await file.arrayBuffer()});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);activeSession=d.session;sessionStorage.setItem('tre_loto7_session',activeSession);status.textContent=d.count+'件（第'+d.last_draw+'回まで）取込完了。1時間・再起動までのセッションです。';$('hist-val').textContent=d.count+'回';addLog('green','[CSV] '+d.count+'件取込完了。SCANで分析できます。')}catch(e){status.textContent='取込エラー: '+e.message}}
+async function uploadCsv(){const input=$('csv-input'),status=$('csv-status');if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}const file=input.files[0];if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}status.textContent='CSVを検証中...';try{const response=await fetch('/api/history/upload',{method:'POST',headers:{'content-type':'text/csv'},body:await file.arrayBuffer()});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);activeSession=d.session;sessionStorage.setItem('tre_loto7_session',activeSession);if(d.mode==='MYSQL'){
+  dbBackend='mysql';
+  activeSession=null;
+  sessionStorage.removeItem('tre_loto7_session');
+  status.textContent=d.message+' / 第'+d.last_draw+'回まで';
+  $('db-status').textContent='MySQL 接続済：'+d.count+'回';
+}else{
+  status.textContent=d.count+'件（第'+d.last_draw+'回まで）取込完了。1時間・再起動までのセッションです。';
+}$('hist-val').textContent=d.count+'回';addLog('green','[CSV] '+d.count+'件取込完了。SCANで分析できます。')}catch(e){status.textContent='取込エラー: '+e.message}}
 /** TRE-UI: CSVセッションを解除し、架空履歴のデモモードに戻す。 */
-function resetDemo(){activeSession=null;sessionStorage.removeItem('tre_loto7_session');$('csv-status').textContent='架空の抽せん履歴で動作デモを実行します。';$('hist-val').textContent='DEMO';addLog('orange','[MODE] デモに戻しました。')}
+function resetDemo(){
+  if(dbBackend==='mysql'){
+    $('csv-status').textContent='MySQLに登録した履歴は永続保存されます。デモへ切替えたい場合は公開Render版を使用してください。';
+    return;
+  }
+  activeSession=null;sessionStorage.removeItem('tre_loto7_session');$('csv-status').textContent='架空の抽せん履歴で動作デモを実行します。';$('hist-val').textContent='DEMO';addLog('orange','[MODE] デモに戻しました。')}
 /** TRE-UI: メッセージを操作コマンドとして解釈。自由会話LLMには接続しない。 */
 function sendChatMessage(){const input=$('chat-input');const message=input.value.trim();if(!message)return;input.value='';addLog('user',message);return dispatchHaroCommand(message)}
 /** TRE-UI: 画面ロード時に時計、/api/health、履歴セッションの状態を初期化。 */
@@ -406,7 +435,7 @@ class HaroVoiceAssistant {
       return;
     }
     this.enabled=true;
-    this.awake=false;
+    // 起動済みのAIはマイクON/OFF後も起動状態を維持する。
     this.paused=false;
     this._updateButton();
     this.setState('待機中。マイクを許可し、「おーい、ハロ」と呼びかけてください。');
@@ -414,7 +443,7 @@ class HaroVoiceAssistant {
   }
   disable(){
     this.enabled=false;
-    this.awake=false;
+    // マイクOFFはシステムの停止ではない。
     this.paused=false;
     clearTimeout(this.restartTimer);
     if(this.recognition){try{this.recognition.abort()}catch(e){}}
@@ -568,6 +597,57 @@ const haroSpeech=new HaroSpeechController();
 const voiceAssistant=new HaroVoiceAssistant();
 voiceAssistant.readCycle=0;
 
-window.addEventListener('DOMContentLoaded',async()=>{const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');tick();setInterval(tick,1000);try{const res=await fetch('/api/health');if(!res.ok)throw Error('HTTP '+res.status);setStatus('ONLINE / READY',true);$('api-val').textContent='READY';$('hist-val').textContent=activeSession?'SESSION':'DEMO';$('mlp-val').textContent='READY'}catch(e){setStatus('OFFLINE',false);$('api-val').textContent='ERROR'}if(activeSession)$('csv-status').textContent='CSVセッションを復元しました。有効期限は1時間です。'});
+
+/** 起動後にのみ時計とAPI接続確認を開始する。起動前はfetchしない。 */
+async function initializeHaroSystem(){
+  const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');
+  tick();setInterval(tick,1000);
+  try{
+    const res=await fetch('/api/health');
+    if(!res.ok)throw Error('HTTP '+res.status);
+    const health=await res.json();
+    const db=health.database||{backend:'memory',status:'disabled',draw_count:0};
+    dbBackend=db.backend;
+    $('db-status').textContent=
+      db.backend==='mysql' ? (
+        db.status==='connected' ? 'MySQL 接続済：'+db.draw_count+'回 / phpMyAdminで管理'
+                                : 'MySQL 接続エラー：XAMPPのMySQLと接続設定を確認'
+      ) : 'DB：メモリモード（公開サイト）';
+    setStatus(db.status==='unavailable'?'DB OFFLINE':'ONLINE / READY',db.status!=='unavailable');
+    $('api-val').textContent='READY';
+    $('hist-val').textContent=db.backend==='mysql'?db.draw_count+'回':(activeSession?'SESSION':'DEMO');
+    $('mlp-val').textContent='READY';
+    if(db.backend==='mysql'){
+      activeSession=null;sessionStorage.removeItem('tre_loto7_session');
+      $('csv-status').textContent='CSVを取り込むとMySQLへ永続保存されます。既存の番号は重複登録しません。';
+    }else if(activeSession){
+      $('csv-status').textContent='CSVセッションを復元しました。有効期限は1時間です。';
+    }
+  }catch(error){
+    setStatus('API OFFLINE',false);
+    $('api-val').textContent='ERROR';
+    $('db-status').textContent='API接続失敗：'+error.message;
+  }
+}
+
+/**
+ * 唯一の初回起動エントリポイント。
+ * ボタンクリックによるユーザージェスチャーを利用してWeb Speech APIで指定文言を再生する。
+ * マイク許可はここでは要求しない。発話中は中央のオレンジハロの目・耳が動く。
+ */
+function bootHaroSystem(){
+  if(systemBooted)return;
+  systemBooted=true;
+  document.body.classList.remove('boot-locked');
+  $('boot-screen').classList.add('boot-finished');
+  $('boot-screen').setAttribute('aria-hidden','true');
+  voiceAssistant.awake=true;
+  currentHaro='orange';
+  const startupMessage='3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・ブルー、同期完了';
+  addLog('orange','[AIハロ起動] '+startupMessage);
+  // 「AIハロ起動」クリックの同期的なイベント処理中に speak() を開始する。
+  haroSpeech.say(startupMessage,'orange');
+  void initializeHaroSystem();
+}
 </script>
 </body></html>
