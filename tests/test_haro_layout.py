@@ -32,8 +32,13 @@ def test_three_haro_svg_have_identical_geometry():
         for part in (
             'cx="98" cy="142" rx="7" ry="12"',
             'cx="142" cy="142" rx="7" ry="12"',
-            'cx="40" cy="36" rx="42" ry="14"',
-            'cx="200" cy="36" rx="42" ry="14"',
+            'cx="46" cy="115" rx="31" ry="45"',
+            'cx="194" cy="115" rx="31" ry="45"',
+            'class="ear-hatch ear-hatch-left"',
+            'class="ear-hatch ear-hatch-right"',
+            'class="haro-head-assembly"',
+            'class="ear-interior ear-interior-left"',
+            'class="ear-interior ear-interior-right"',
         ):
             assert part in svg
 
