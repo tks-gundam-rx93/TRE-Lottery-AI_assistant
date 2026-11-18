@@ -25,6 +25,7 @@ from lottery_ai.agents import OpenAICompatibleClient, ThreeAgentDebate
 from lottery_ai.core import (Candidate, CsvDrawLoader, DeepLearningStrategy, Draw,
     FrequencyStrategy, GapPairStrategy, HistoryAnalyzer, MonteCarloStrategy)
 from lottery_ai.deep_numpy import NumpyDeepForecaster
+from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 
 
 class PredictRequest(BaseModel):
@@ -68,6 +69,10 @@ class PredictionService:
     def __init__(self):
         self.sessions = SessionHistoryStore()
         self.demo = self._make_demo(160)
+        # Renderはデモ、ローカル発表は環境変数によってMySQLに切替える。
+        # DBの資格情報はブラウザへ一切送信しない。
+        self.mysql = (MySqlDrawRepository(MySqlSettings.from_env())
+                      if os.getenv('LOTTERY_DB_BACKEND', 'memory').lower() == 'mysql' else None)
 
     @staticmethod
     def _make_demo(size: int) -> list[Draw]:
@@ -82,6 +87,17 @@ class PredictionService:
             if history is None:
                 raise HTTPException(status_code=404, detail='セッションの有効期限が切れました。CSVを再登録してください')
             return history, 'UPLOADED_CSV'
+        if self.mysql is not None:
+            try:
+                draws = self.mysql.all()
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail='MySQLに接続できません。XAMPPのMySQL起動と環境変数を確認してください'
+                ) from exc
+            if len(draws) >= 20:
+                return draws, 'MYSQL'
+            # 空DBには架空の抽せん結果を保存しない。
         return self.demo, 'SYNTHETIC_DEMO'
 
     def predict(self, req: PredictRequest) -> dict[str, Any]:
@@ -114,7 +130,7 @@ class PredictionService:
             if len(picked) == req.count:
                 break
         # 同方式だけに偏った場合も候補には方式ラベルを残す。
-        return {
+        result = {
             'game': 'LOTO7', 'mode': source, 'last_draw': history[-1].draw_no if source != 'SYNTHETIC_DEMO' else None,
             'target_draw': history[-1].draw_no + 1 if source != 'SYNTHETIC_DEMO' else None,
             'history_count': len(history), 'generated_at': datetime.now(timezone.utc).isoformat(),
@@ -125,6 +141,15 @@ class PredictionService:
                 if source == 'SYNTHETIC_DEMO' else
                 '統計・学習・得票スコアは当せん確率ではありません。公平な抽せんなら全組み合わせの確率は等しい。'),
         }
+        if self.mysql is not None:
+            try:
+                result['prediction_run_id'] = self.mysql.save_prediction(result)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail='予測履歴をMySQLに保存できませんでした。DBを確認してください'
+                ) from exc
+        return result
 
 
 service = PredictionService()
@@ -138,9 +163,22 @@ def home():
 
 @app.get('/api/health')
 def health():
-    return {'status': 'ok', 'game': 'LOTO7', 'history_mode': 'SYNTHETIC_DEMO',
+    # DBが未起動でもAPIプロセスを止めず、UIに接続状態を返す。
+    db_state = 'disabled'
+    rows = 0
+    if service.mysql is not None:
+        try:
+            rows = len(service.mysql.all())
+            db_state = 'connected'
+        except Exception:
+            db_state = 'unavailable'
+    return {'status': 'ok', 'game': 'LOTO7',
+            'history_mode': 'MYSQL' if db_state == 'connected' and rows >= 20 else 'SYNTHETIC_DEMO',
+            'database': {'backend': 'mysql' if service.mysql is not None else 'memory',
+                         'status': db_state, 'draw_count': rows},
             'learning': 'numpy_mlp', 'three_agents': 'rules; llm optional',
-            'upload_storage': 'one-hour in-memory session'}
+            'upload_storage': 'MySQL persistent' if service.mysql is not None
+                              else 'one-hour in-memory session'}
 
 
 @app.post('/api/history/upload')
@@ -160,6 +198,20 @@ async def upload_csv(request: Request):
         Path(filepath).unlink(missing_ok=True)
     if len(draws) < 20:
         raise HTTPException(status_code=422, detail='20回以上の履歴が必要です')
+    if service.mysql is not None:
+        try:
+            inserted = service.mysql.upsert(draws, 'CSV')
+            total = service.mysql.all()
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail='MySQL登録失敗。XAMPPの起動・接続権限・テーブル設定を確認してください'
+            ) from exc
+        return {'mode': 'MYSQL', 'session': None, 'count': len(total),
+                'inserted': inserted, 'last_draw': total[-1].draw_no,
+                'message': f'MySQLに{inserted}件新規登録しました（永続保存）'}
     try:
         session = service.sessions.create(draws)
     except ValueError as exc:
