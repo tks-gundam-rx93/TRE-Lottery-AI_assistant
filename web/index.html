@@ -450,6 +450,86 @@ class HaroSpeechController {
     this.utterance=null;
     this.accentTimer=null;
     this.sequence=0;
+    this.pulseTimer=null;
+    this.audioContext=null;
+    // 高めの声域と速い発声、フレーズの切り方を参照した独自の合成音声プリセット。
+    // 数値はWeb Speech APIの制御値であり、録画の声帯基本周波数の直接変換ではない。
+    this.settings={pitch:1.50,rate:1.25,chirp:true};
+    this.lastChirp=0;
+  }
+  /**
+   * マイク権限とは無関係。クリック操作中にWeb Audioをアンロックする。
+   * Web Speech API音声はPCMへルーティングできないため、電子音は別系統で重ねる。
+   */
+  armAudio(){
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx)return;
+      if(!this.audioContext)this.audioContext=new Ctx();
+      if(this.audioContext.state==='suspended')void this.audioContext.resume();
+    }catch(e){/* 電子音が使えなくても日本語TTSで動作継続 */}
+  }
+  /** 低音量・短時間のオリジナル電子音でロボット調のアクセントを付ける。 */
+  _chirp(){
+    if(!this.settings.chirp||!this.audioContext)return;
+    const audio=this.audioContext;
+    if(audio.state!=='running')return;
+    const now=audio.currentTime;
+    // 連続するboundaryで電子音が過剰にならないよう間隔制御。
+    if(now-this.lastChirp<.38)return;
+    this.lastChirp=now;
+    try{
+      for(const [index,freq] of [[0,720],[1,970]]){
+        const oscillator=audio.createOscillator();
+        const gain=audio.createGain();
+        oscillator.type='triangle';
+        oscillator.frequency.setValueAtTime(freq,now+index*.055);
+        oscillator.frequency.exponentialRampToValueAtTime(freq*1.12,now+index*.055+.042);
+        gain.gain.setValueAtTime(.0001,now+index*.055);
+        gain.gain.exponentialRampToValueAtTime(.018,now+index*.055+.009);
+        gain.gain.exponentialRampToValueAtTime(.0001,now+index*.055+.045);
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        oscillator.start(now+index*.055);
+        oscillator.stop(now+index*.055+.047);
+      }
+    }catch(e){/* TTSの発話は優先し、電子音エラーは無視 */}
+  }
+  /** 語句境界イベントがないSafari等に備えた近似的な音節リズム。 */
+  _startCadence(rate){
+    clearInterval(this.pulseTimer);
+    const step=Math.max(120,Math.round(245/rate));
+    this.pulseTimer=setInterval(()=>{
+      if(this.speaking&&this.activeId)this._accent(this.activeId);
+    },step);
+  }
+  /** サンプルで観察した音域・テンポに近づけるため利用者が調整できる。 */
+  updateSettings(save=true){
+    const pitch=Number($('voice-pitch')?.value||1.50);
+    const rate=Number($('voice-rate')?.value||1.25);
+    this.settings={
+      pitch:Math.max(.8,Math.min(2,pitch)),
+      rate:Math.max(.75,Math.min(1.85,rate)),
+      chirp:!!$('voice-chirp')?.checked
+    };
+    $('voice-pitch-label').textContent=this.settings.pitch.toFixed(2);
+    $('voice-rate-label').textContent=this.settings.rate.toFixed(2);
+    if(save)try{localStorage.setItem('tre_haro_voice_settings',JSON.stringify(this.settings))}catch(e){}
+  }
+  restoreSettings(){
+    try{
+      const stored=JSON.parse(localStorage.getItem('tre_haro_voice_settings')||'null');
+      if(stored){
+        if(typeof stored.pitch==='number'&&Number.isFinite(stored.pitch))$('voice-pitch').value=stored.pitch;
+        if(typeof stored.rate==='number'&&Number.isFinite(stored.rate))$('voice-rate').value=stored.rate;
+        if(typeof stored.chirp==='boolean')$('voice-chirp').checked=stored.chirp;
+      }
+    }catch(e){}
+    this.updateSettings(false);
+  }
+  preview(){
+    this.armAudio();
+    void this.say('ハロ、ハロ！　システム、準備完了だぞ！',currentHaro);
   }
   _setFace(id,enabled){
     const el=$('pod-'+id);
@@ -468,6 +548,8 @@ class HaroSpeechController {
     this.sequence++;
     if(this.synth)this.synth.cancel();
     clearTimeout(this.accentTimer);
+    clearInterval(this.pulseTimer);
+    this.pulseTimer=null;
     if(this.activeId)this._setFace(this.activeId,false);
     this.activeId=null;
     this.speaking=false;
@@ -492,8 +574,12 @@ class HaroSpeechController {
       this.utterance=utterance;
       utterance.lang='ja-JP';
       // キャラクターの「短く元気なロボット調」を再現。特定の声優音声の複製はしない。
-      const profiles={orange:[1.12,1.35],blue:[1.02,1.12],green:[.98,1.22]};
-      [utterance.rate,utterance.pitch]=profiles[id]||profiles.orange;
+      // 録画の印象を元に高めのピッチ・速めのテンポを標準に設定。
+      // 3体ごとに微小な個性差を加えつつ、画面のスライダーで調整できる。
+      const profiles={orange:[1.00,1.00],blue:[.96,.92],green:[.94,1.06]};
+      const [rateFactor,pitchFactor]=profiles[id]||profiles.orange;
+      utterance.rate=Math.max(.6,Math.min(2,this.settings.rate*rateFactor));
+      utterance.pitch=Math.max(.5,Math.min(2,this.settings.pitch*pitchFactor));
       utterance.volume=1;
       const voices=this.synth.getVoices();
       const ja=voices.find(v=>v.lang?.toLowerCase()==='ja-jp')
@@ -504,6 +590,8 @@ class HaroSpeechController {
         if(finished)return;
         finished=true;
         if(token===this.sequence){
+          clearInterval(this.pulseTimer);
+          this.pulseTimer=null;
           this._setFace(id,false);
           this.activeId=null;
           this.speaking=false;
@@ -515,10 +603,14 @@ class HaroSpeechController {
       utterance.onstart=()=>{
         if(token!==this.sequence)return;
         this._setFace(id,true);
-        voiceAssistant.setState('発話中：'+agentNames[id]+'（目と耳が連動）');
+        this._startCadence(utterance.rate);
+        this._chirp();
+        voiceAssistant.setState('発話中：'+agentNames[id]+'（耳ハッチ・目・頭部が連動）');
       };
       utterance.onboundary=()=>{
-        if(token===this.sequence)this._accent(id);
+        if(token!==this.sequence)return;
+        this._accent(id);
+        this._chirp();
       };
       utterance.onend=cleanup;
       utterance.onerror=cleanup;
@@ -674,6 +766,7 @@ class HaroVoiceAssistant {
     if(!haroSpeech.synth||!$('voice-output').checked)this.setState('ハロ起動済み。音声出力設定とブラウザ対応をご確認ください。');
   }
   wakeByTap(){
+    haroSpeech.armAudio();
     this.wake(); // 音声認識が使えない環境でも操作で起動できる
   }
   stopSpeech(){
@@ -771,6 +864,9 @@ async function initializeHaroSystem(){
  */
 function bootHaroSystem(){
   if(systemBooted)return;
+  // ブラウザの自動再生制限に対応するため、クリック中に音声処理を有効化する。
+  haroSpeech.restoreSettings();
+  haroSpeech.armAudio();
   systemBooted=true;
   document.body.classList.remove('boot-locked');
   $('boot-screen').classList.add('boot-finished');
