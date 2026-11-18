@@ -62,3 +62,20 @@ python -m lottery_ai --db data/lottery.db --with-dl
 
 `main` は基盤用です。専用開発ブランチからPRでコードレビューしてから統合する運用を想定します。
 RenderのPython Web Service: build `pip install -r requirements.txt`, start `uvicorn app:app --host 0.0.0.0 --port $PORT`。
+## 発表用：ローカルMySQL／phpMyAdmin／iPhone
+
+発表時はXAMPPのMySQLを使用します。GitHubにDBパスワードは保存しません。
+
+1. XAMPPのMySQLとApacheを起動し、`http://localhost/phpmyadmin/` を開く。
+2. `scripts/setup_local_mysql.sql` をphpMyAdminから実行してDBとテーブルを作る。
+3. `tre_lottery_app` を接続元127.0.0.1だけで作成し、`tre_lottery` に必要な権限を与える。
+4. `config/local.env.cmd.example` を `config/local.env.cmd` にコピーし、実際のDBパスワードを設定する。
+5. `python -m pip install -r requirements.txt` 後、`scripts\\start_local.cmd` で起動する。
+6. PCは `http://localhost:8000/`、iPhoneは同じWi-Fiから `http://PCのIPv4:8000/` にアクセスする。
+7. `GET /api/health` の `database.status` が `connected` ならDB接続成功。
+
+**MySQL時の処理:** CSV取込→`draw_results`に重複排除して永続保存→予測実行→`prediction_runs`に予測・判定JSONを保存。MySQLが空で20回未満の場合は架空データによるデモモードを明示します。SQLite用CLIもそのまま利用可能。RenderはMySQLを使わず従来のデモモードです。
+
+**起動仕様:** 初期画面では「AIハロ起動」ボタンのみが中央に表示され、押すとメイン画面を公開して「3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・ブルー、同期完了」と音声合成します。音声認識にはブラウザの許可・HTTPS制約があります。
+
+手順詳細: [docs/local_xampp_iphone.md](docs/local_xampp_iphone.md)
