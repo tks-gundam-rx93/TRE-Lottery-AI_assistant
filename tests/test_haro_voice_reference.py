@@ -49,6 +49,9 @@ def test_voice_tuning_controls_and_local_storage():
         "preview(){",
         "tre_haro_voice_settings",
         "new SpeechSynthesisUtterance",
+        "let startGuard=null;",
+        "3500",
+        "this._setFace(id,true);",
     ):
         assert method in source
     assert "haroSpeech.armAudio();" in source
