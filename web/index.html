@@ -108,6 +108,45 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 #boot-launch{display:block;padding:23px 38px;border:2px solid var(--cyan);border-radius:12px;background:linear-gradient(135deg,#0d374d,#142841);color:#ecffff;font-size:clamp(18px,5vw,30px);font-weight:900;letter-spacing:.1em;box-shadow:0 0 20px rgba(0,229,255,.46),inset 0 0 17px #00e5ff30;cursor:pointer;transition:transform .2s,box-shadow .2s}
 #boot-launch:hover{transform:scale(1.045);box-shadow:0 0 34px rgba(0,229,255,.72)}
 #boot-launch:focus-visible{outline:3px solid #fff;outline-offset:5px}
+
+/* APPROVED ART: 承認済み最終画像をそのままメイン表示に使う。オレンジ前面、緑/紫後方。 */
+:root{--purple:#8551dc}
+.stage.reference-stage{height:auto;max-width:960px;margin:0 auto;overflow:visible;border-bottom:0;background:#0a1427}
+.stage.reference-stage:before,.stage.reference-stage:after{display:none}
+.haro-art-stage{position:relative;width:100%;aspect-ratio:1448/1086;isolation:isolate;overflow:hidden;background:#0a172c}
+.haro-art-approved{display:block;width:100%;height:100%;object-fit:fill}
+.haro-art-closed{position:absolute;top:0;left:0;width:100%;height:68.23%;object-fit:fill;opacity:1;pointer-events:none;
+  transform:translateY(0) scale(1);transform-origin:center 70%;
+  transition:opacity .68s ease-in-out,transform .76s cubic-bezier(.2,.7,.2,1);z-index:2}
+.haro-art-stage.ears-open .haro-art-closed{opacity:0;transform:translateY(2%) scale(.97)}
+.haro-art-stage .art-hitbox{position:absolute;top:18%;bottom:auto;width:29%;height:45%;aspect-ratio:auto;
+ background:transparent;border:0;transform:none;filter:none;z-index:10;opacity:1}
+.haro-art-stage .art-hitbox:hover,.haro-art-stage .art-hitbox.selected{transform:none;filter:none}
+.haro-art-stage .art-hitbox:hover{box-shadow:inset 0 0 20px rgba(255,255,255,.12)}
+.haro-art-stage .art-hitbox:focus-visible{outline:2px solid #fff;outline-offset:0}
+.haro-art-stage #pod-green{left:4%;right:auto;z-index:10}
+.haro-art-stage #pod-orange{left:34%;right:auto;z-index:11}
+.haro-art-stage #pod-purple{right:5%;left:auto;z-index:10}
+.haro-art-controls{display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap;
+ padding:9px 8px;background:#071526;border:1px solid #23435f}
+.haro-art-controls .btn{font-size:11px;padding:7px 11px}
+.haro-art-controls .haro-purple-btn{border-color:#a567fd;color:#d8b7ff}
+.haro-ear-state{text-align:center;background:#040d1a;font-size:10px;color:#bceeff;padding:5px}
+.haro-eye-pulses{position:absolute;inset:0;pointer-events:none;z-index:5}
+.haro-eye-pulse{position:absolute;left:var(--x);top:var(--y);width:2%;height:3%;border-radius:50%;
+ background:var(--eye);filter:blur(5px);box-shadow:0 0 18px 8px var(--eye);opacity:0;transform:translate(-50%,-50%)}
+@keyframes haro-approved-eye-pulse{0%,100%{opacity:.12;transform:translate(-50%,-50%) scale(.75)}
+  35%{opacity:.9;transform:translate(-50%,-50%) scale(1.22)}
+  65%{opacity:.3;transform:translate(-50%,-50%) scale(.9)}}
+.haro-art-stage[data-speaker="green"] .haro-eye-pulse.green,
+.haro-art-stage[data-speaker="orange"] .haro-eye-pulse.orange,
+.haro-art-stage[data-speaker="purple"] .haro-eye-pulse.purple{
+ animation:haro-approved-eye-pulse .28s ease-in-out infinite}
+.msg.purple{border-color:#9e64ff;background:rgba(133,81,220,.13)}
+@media(max-width:500px){.stage.reference-stage{height:auto}.haro-art-controls .btn{font-size:9px;padding:6px 7px}
+ .haro-ear-state{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.haro-art-closed{transition:none}
+ .haro-eye-pulse{animation:none!important}}
 </style>
 </head>
 <body class="boot-locked">
@@ -118,216 +157,42 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <!-- TRE-UI: ステータスはAPI接続／解析状況に応じてJavaScriptから更新。 -->
 <header><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
-<section class="stage" aria-label="3AIのハロ型ユニット">
-<div class="haro-container">
-<!-- TRE-UI: 緑ハロはNEMESIS（批判・検証役）。 -->
-<button class="haro" id="pod-green" onclick="selectHaro('green')" title="NEMESIS" aria-label="NEMESISを選択">
-<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-<defs>
-  <!-- 3体で同一のSVG形状・viewBoxを使用。各ユニットで異なるのは色のみ。 -->
-  <radialGradient id="green-body" cx="40%" cy="30%" r="76%">
-    <stop offset="0%" stop-color="#91ffc1"/>
-    <stop offset="52%" stop-color="#27ad58"/>
-    <stop offset="100%" stop-color="#073e22"/>
-  </radialGradient>
-  <linearGradient id="green-metal" x1="0%" y1="0%" x2="100%" y2="0%">
-    <stop offset="0%" stop-color="#3b5458"/>
-    <stop offset="48%" stop-color="#a9c7c4"/>
-    <stop offset="100%" stop-color="#3b5458"/>
-  </linearGradient>
-  <linearGradient id="green-ear" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stop-color="#6ceb94"/>
-    <stop offset="100%" stop-color="#12713b"/>
-  </linearGradient>
-</defs>
-<!-- 首の基部とロック機構は全機共通。 -->
-<path d="M25 210 Q120 250 215 210 L228 270 Q120 296 12 270Z" fill="url(#green-metal)" stroke="#131b24" stroke-width="3"/>
-<polygon points="105,238 135,238 142,269 98,269" fill="#a9c7c4" stroke="#25313d" stroke-width="2.5"/>
-<g class="haro-head-assembly">
-<!-- 頭部の中心(cx=120,cy=144)、半径(r=96)を完全統一。 -->
-<circle class="haro-head" cx="120" cy="144" r="96" fill="url(#green-body)" stroke="#0d3220" stroke-width="3.5"/>
-<!-- 耳奥の機械室と機構部。 -->
-<path d="M26 129 Q32 79 74 64 L58 111Z M214 129 Q208 79 166 64 L182 111Z" fill="#2b1325" stroke="#1d1020" stroke-width="2.5"/>
-<path d="M47 102 Q69 83 83 98 M193 102 Q171 83 157 98" fill="none" stroke="#a9c7c4" stroke-width="7" stroke-linecap="round"/>
-<!-- class=earsは音声発話時の耳アニメーション対象。 -->
-<g class="ears">
-  <!-- ゲーム映像の動きに合わせ、耳の内側に歯車・駆動軸・支持アームを設ける。 -->
-  <g class="ear-interior ear-interior-left">
-    <ellipse cx="46" cy="114" rx="30" ry="44" fill="#12432e" stroke="#a9c7c4" stroke-width="2.4"/>
-    <circle cx="46" cy="116" r="21" fill="#40283d" stroke="#a9c7c4" stroke-width="2"/>
-    <circle cx="46" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="46" cy="116" r="7" fill="#a9c7c4" stroke="#3a3a3a"/>
-    <path d="M31 103L62 129 M31 129L61 103 M46 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="62" cy="83" r="8" fill="#a9c7c4" stroke="#273948" stroke-width="2"/>
-  </g>
-  <g class="ear-interior ear-interior-right">
-    <ellipse cx="194" cy="114" rx="30" ry="44" fill="#12432e" stroke="#a9c7c4" stroke-width="2.4"/>
-    <circle cx="194" cy="116" r="21" fill="#40283d" stroke="#a9c7c4" stroke-width="2"/>
-    <circle cx="194" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="194" cy="116" r="7" fill="#a9c7c4" stroke="#3a3a3a"/>
-    <path d="M179 103L210 129 M179 129L210 103 M194 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="178" cy="83" r="8" fill="#a9c7c4" stroke="#273948" stroke-width="2"/>
-  </g>
-  <!-- 左右それぞれ別のヒンジを持つ開閉ハッチ。音声時は逆向きへ回転させる。 -->
-  <g class="ear-hatch ear-hatch-left">
-    <ellipse cx="46" cy="115" rx="31" ry="45" fill="url(#green-ear)" stroke="#12432e" stroke-width="3"/>
-    <ellipse cx="42" cy="112" rx="23" ry="35" fill="none" stroke="#8fffc2" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M31 85 Q44 91 57 83" fill="none" stroke="#a9c7c4" stroke-width="3"/>
-  </g>
-  <g class="ear-hatch ear-hatch-right">
-    <ellipse cx="194" cy="115" rx="31" ry="45" fill="url(#green-ear)" stroke="#12432e" stroke-width="3"/>
-    <ellipse cx="190" cy="112" rx="23" ry="35" fill="none" stroke="#8fffc2" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M178 85 Q192 91 205 83" fill="none" stroke="#a9c7c4" stroke-width="3"/>
-  </g>
-</g>
-<!-- class=voice-eyeは発話時にまばたき・発光する。位置と大きさは3体共通。 -->
-<ellipse class="voice-eye" cx="98" cy="142" rx="7" ry="12" fill="#ff4b80" stroke="#0d3220" stroke-width="1.3"/>
-<ellipse class="voice-eye" cx="142" cy="142" rx="7" ry="12" fill="#ff4b80" stroke="#0d3220" stroke-width="1.3"/>
-<circle cx="96" cy="138" r="2.6" fill="#ffe4ee"/>
-<circle cx="140" cy="138" r="2.6" fill="#ffe4ee"/>
-<!-- 表情を揃えた口のライン。 -->
-<path d="M24 169 Q65 178 92 166 Q120 154 148 166 Q175 178 216 169" fill="none" stroke="#0d3220" stroke-width="3.7" stroke-linecap="round"/>
-</g>
-</svg><span class="tag">NEMESIS</span></button>
-<!-- TRE-UI: 青ハロはCHAOS（探索・多様性重視）。 -->
-<button class="haro" id="pod-blue" onclick="selectHaro('blue')" title="CHAOS" aria-label="CHAOSを選択">
-<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-<defs>
-  <!-- 3体で同一のSVG形状・viewBoxを使用。各ユニットで異なるのは色のみ。 -->
-  <radialGradient id="blue-body" cx="40%" cy="30%" r="76%">
-    <stop offset="0%" stop-color="#9bcbff"/>
-    <stop offset="52%" stop-color="#275bcc"/>
-    <stop offset="100%" stop-color="#09215c"/>
-  </radialGradient>
-  <linearGradient id="blue-metal" x1="0%" y1="0%" x2="100%" y2="0%">
-    <stop offset="0%" stop-color="#3d5270"/>
-    <stop offset="48%" stop-color="#a9bfda"/>
-    <stop offset="100%" stop-color="#3d5270"/>
-  </linearGradient>
-  <linearGradient id="blue-ear" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stop-color="#6c96ff"/>
-    <stop offset="100%" stop-color="#143c94"/>
-  </linearGradient>
-</defs>
-<!-- 首の基部とロック機構は全機共通。 -->
-<path d="M25 210 Q120 250 215 210 L228 270 Q120 296 12 270Z" fill="url(#blue-metal)" stroke="#131b24" stroke-width="3"/>
-<polygon points="105,238 135,238 142,269 98,269" fill="#a9bfda" stroke="#25313d" stroke-width="2.5"/>
-<g class="haro-head-assembly">
-<!-- 頭部の中心(cx=120,cy=144)、半径(r=96)を完全統一。 -->
-<circle class="haro-head" cx="120" cy="144" r="96" fill="url(#blue-body)" stroke="#091c58" stroke-width="3.5"/>
-<!-- 耳奥の機械室と機構部。 -->
-<path d="M26 129 Q32 79 74 64 L58 111Z M214 129 Q208 79 166 64 L182 111Z" fill="#271730" stroke="#1d1020" stroke-width="2.5"/>
-<path d="M47 102 Q69 83 83 98 M193 102 Q171 83 157 98" fill="none" stroke="#a9bfda" stroke-width="7" stroke-linecap="round"/>
-<!-- class=earsは音声発話時の耳アニメーション対象。 -->
-<g class="ears">
-  <!-- ゲーム映像の動きに合わせ、耳の内側に歯車・駆動軸・支持アームを設ける。 -->
-  <g class="ear-interior ear-interior-left">
-    <ellipse cx="46" cy="114" rx="30" ry="44" fill="#09215c" stroke="#a9bfda" stroke-width="2.4"/>
-    <circle cx="46" cy="116" r="21" fill="#40283d" stroke="#a9bfda" stroke-width="2"/>
-    <circle cx="46" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="46" cy="116" r="7" fill="#a9bfda" stroke="#3a3a3a"/>
-    <path d="M31 103L62 129 M31 129L61 103 M46 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="62" cy="83" r="8" fill="#a9bfda" stroke="#273948" stroke-width="2"/>
-  </g>
-  <g class="ear-interior ear-interior-right">
-    <ellipse cx="194" cy="114" rx="30" ry="44" fill="#09215c" stroke="#a9bfda" stroke-width="2.4"/>
-    <circle cx="194" cy="116" r="21" fill="#40283d" stroke="#a9bfda" stroke-width="2"/>
-    <circle cx="194" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="194" cy="116" r="7" fill="#a9bfda" stroke="#3a3a3a"/>
-    <path d="M179 103L210 129 M179 129L210 103 M194 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="178" cy="83" r="8" fill="#a9bfda" stroke="#273948" stroke-width="2"/>
-  </g>
-  <!-- 左右それぞれ別のヒンジを持つ開閉ハッチ。音声時は逆向きへ回転させる。 -->
-  <g class="ear-hatch ear-hatch-left">
-    <ellipse cx="46" cy="115" rx="31" ry="45" fill="url(#blue-ear)" stroke="#09215c" stroke-width="3"/>
-    <ellipse cx="42" cy="112" rx="23" ry="35" fill="none" stroke="#a9ceff" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M31 85 Q44 91 57 83" fill="none" stroke="#a9bfda" stroke-width="3"/>
-  </g>
-  <g class="ear-hatch ear-hatch-right">
-    <ellipse cx="194" cy="115" rx="31" ry="45" fill="url(#blue-ear)" stroke="#09215c" stroke-width="3"/>
-    <ellipse cx="190" cy="112" rx="23" ry="35" fill="none" stroke="#a9ceff" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M178 85 Q192 91 205 83" fill="none" stroke="#a9bfda" stroke-width="3"/>
-  </g>
-</g>
-<!-- class=voice-eyeは発話時にまばたき・発光する。位置と大きさは3体共通。 -->
-<ellipse class="voice-eye" cx="98" cy="142" rx="7" ry="12" fill="#ff47bd" stroke="#091c58" stroke-width="1.3"/>
-<ellipse class="voice-eye" cx="142" cy="142" rx="7" ry="12" fill="#ff47bd" stroke="#091c58" stroke-width="1.3"/>
-<circle cx="96" cy="138" r="2.6" fill="#ffe7f7"/>
-<circle cx="140" cy="138" r="2.6" fill="#ffe7f7"/>
-<!-- 表情を揃えた口のライン。 -->
-<path d="M24 169 Q65 178 92 166 Q120 154 148 166 Q175 178 216 169" fill="none" stroke="#091c58" stroke-width="3.7" stroke-linecap="round"/>
-</g>
-</svg><span class="tag">CHAOS</span></button>
-<!-- TRE-UI: 橙ハロはLOGOS（統計・論理重視）。 -->
-<button class="haro selected" id="pod-orange" onclick="selectHaro('orange')" title="LOGOS" aria-label="LOGOSを選択">
-<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-<defs>
-  <!-- 3体で同一のSVG形状・viewBoxを使用。各ユニットで異なるのは色のみ。 -->
-  <radialGradient id="orange-body" cx="40%" cy="30%" r="76%">
-    <stop offset="0%" stop-color="#ffda8c"/>
-    <stop offset="52%" stop-color="#e78729"/>
-    <stop offset="100%" stop-color="#893c0c"/>
-  </radialGradient>
-  <linearGradient id="orange-metal" x1="0%" y1="0%" x2="100%" y2="0%">
-    <stop offset="0%" stop-color="#455362"/>
-    <stop offset="48%" stop-color="#bdcad7"/>
-    <stop offset="100%" stop-color="#455362"/>
-  </linearGradient>
-  <linearGradient id="orange-ear" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stop-color="#ffc16f"/>
-    <stop offset="100%" stop-color="#ab540f"/>
-  </linearGradient>
-</defs>
-<!-- 首の基部とロック機構は全機共通。 -->
-<path d="M25 210 Q120 250 215 210 L228 270 Q120 296 12 270Z" fill="url(#orange-metal)" stroke="#131b24" stroke-width="3"/>
-<polygon points="105,238 135,238 142,269 98,269" fill="#bdcad7" stroke="#25313d" stroke-width="2.5"/>
-<g class="haro-head-assembly">
-<!-- 頭部の中心(cx=120,cy=144)、半径(r=96)を完全統一。 -->
-<circle class="haro-head" cx="120" cy="144" r="96" fill="url(#orange-body)" stroke="#381e09" stroke-width="3.5"/>
-<!-- 耳奥の機械室と機構部。 -->
-<path d="M26 129 Q32 79 74 64 L58 111Z M214 129 Q208 79 166 64 L182 111Z" fill="#370d22" stroke="#1d1020" stroke-width="2.5"/>
-<path d="M47 102 Q69 83 83 98 M193 102 Q171 83 157 98" fill="none" stroke="#bdcad7" stroke-width="7" stroke-linecap="round"/>
-<!-- class=earsは音声発話時の耳アニメーション対象。 -->
-<g class="ears">
-  <!-- ゲーム映像の動きに合わせ、耳の内側に歯車・駆動軸・支持アームを設ける。 -->
-  <g class="ear-interior ear-interior-left">
-    <ellipse cx="46" cy="114" rx="30" ry="44" fill="#893c0c" stroke="#bdcad7" stroke-width="2.4"/>
-    <circle cx="46" cy="116" r="21" fill="#40283d" stroke="#bdcad7" stroke-width="2"/>
-    <circle cx="46" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="46" cy="116" r="7" fill="#bdcad7" stroke="#3a3a3a"/>
-    <path d="M31 103L62 129 M31 129L61 103 M46 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="62" cy="83" r="8" fill="#bdcad7" stroke="#273948" stroke-width="2"/>
-  </g>
-  <g class="ear-interior ear-interior-right">
-    <ellipse cx="194" cy="114" rx="30" ry="44" fill="#893c0c" stroke="#bdcad7" stroke-width="2.4"/>
-    <circle cx="194" cy="116" r="21" fill="#40283d" stroke="#bdcad7" stroke-width="2"/>
-    <circle cx="194" cy="116" r="14" fill="#8c7a66" stroke="#42352e" stroke-width="2"/>
-    <circle cx="194" cy="116" r="7" fill="#bdcad7" stroke="#3a3a3a"/>
-    <path d="M179 103L210 129 M179 129L210 103 M194 95V136" stroke="#bd9e78" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="178" cy="83" r="8" fill="#bdcad7" stroke="#273948" stroke-width="2"/>
-  </g>
-  <!-- 左右それぞれ別のヒンジを持つ開閉ハッチ。音声時は逆向きへ回転させる。 -->
-  <g class="ear-hatch ear-hatch-left">
-    <ellipse cx="46" cy="115" rx="31" ry="45" fill="url(#orange-ear)" stroke="#893c0c" stroke-width="3"/>
-    <ellipse cx="42" cy="112" rx="23" ry="35" fill="none" stroke="#ffe0a1" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M31 85 Q44 91 57 83" fill="none" stroke="#bdcad7" stroke-width="3"/>
-  </g>
-  <g class="ear-hatch ear-hatch-right">
-    <ellipse cx="194" cy="115" rx="31" ry="45" fill="url(#orange-ear)" stroke="#893c0c" stroke-width="3"/>
-    <ellipse cx="190" cy="112" rx="23" ry="35" fill="none" stroke="#ffe0a1" stroke-opacity=".5" stroke-width="2.3"/>
-    <path d="M178 85 Q192 91 205 83" fill="none" stroke="#bdcad7" stroke-width="3"/>
-  </g>
-</g>
-<!-- class=voice-eyeは発話時にまばたき・発光する。位置と大きさは3体共通。 -->
-<ellipse class="voice-eye" cx="98" cy="142" rx="7" ry="12" fill="#a01928" stroke="#381e09" stroke-width="1.3"/>
-<ellipse class="voice-eye" cx="142" cy="142" rx="7" ry="12" fill="#a01928" stroke="#381e09" stroke-width="1.3"/>
-<circle cx="96" cy="138" r="2.6" fill="#ff8c92"/>
-<circle cx="140" cy="138" r="2.6" fill="#ff8c92"/>
-<!-- 表情を揃えた口のライン。 -->
-<path d="M24 169 Q65 178 92 166 Q120 154 148 166 Q175 178 216 169" fill="none" stroke="#381e09" stroke-width="3.7" stroke-linecap="round"/>
-</g>
-</svg><span class="tag">MAIN: LOGOS</span></button>
-</div></section>
+<!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
+<section class="stage reference-stage" aria-label="承認済みハロ3体の開閉アートワーク">
+  <div class="haro-art-stage ears-open" id="haro-art-stage" data-speaker="" data-selected="orange">
+    <!-- 開いた耳はオレンジ中央前面、緑左後方、紫右後方。隣同士の耳の重なりも承認デザイン通り。 -->
+    <img class="haro-art-approved" src="/assets/haro-approved.webp"
+      alt="ハロ3体、緑・オレンジ・紫。上段は耳を大きく開き、内部構造が見える状態。下段は耳が閉じた状態。"
+      fetchpriority="high">
+    <!-- 耳を閉じたときだけ前面に現れる画像。トランジションは開閉の状態切替を表現。 -->
+    <img class="haro-art-closed" id="haro-art-closed" src="/assets/haro-closed-stage.webp"
+      alt="" aria-hidden="true" loading="eager">
+    <!-- 発話中のハロだけ目のグローを強調。ユーザー承認済み画像の上に重ねる。 -->
+    <div class="haro-eye-pulses" aria-hidden="true">
+      <i class="haro-eye-pulse green" style="--x:15.9%;--y:32.3%;--eye:#ffcbff"></i>
+      <i class="haro-eye-pulse green" style="--x:19.8%;--y:32.3%;--eye:#ffcbff"></i>
+      <i class="haro-eye-pulse orange" style="--x:45.7%;--y:32.0%;--eye:#ffe2ff"></i>
+      <i class="haro-eye-pulse orange" style="--x:50.9%;--y:32.0%;--eye:#ffe2ff"></i>
+      <i class="haro-eye-pulse purple" style="--x:75.7%;--y:30.8%;--eye:#ff1728"></i>
+      <i class="haro-eye-pulse purple" style="--x:81.8%;--y:30.8%;--eye:#ff1728"></i>
+    </div>
+    <!-- 透明のヒット領域。画面を直接タップして担当AIを切り替えられる。 -->
+    <button type="button" class="haro art-hitbox" id="pod-green" onclick="selectHaro('green')"
+      aria-label="緑ハロ NEMESIS を選択"></button>
+    <button type="button" class="haro art-hitbox selected" id="pod-orange" onclick="selectHaro('orange')"
+      aria-label="中央のオレンジハロ LOGOS を選択"></button>
+    <button type="button" class="haro art-hitbox" id="pod-purple" onclick="selectHaro('purple')"
+      aria-label="紫ハロ CHAOS を選択"></button>
+  </div>
+  <div class="haro-art-controls">
+    <button type="button" class="btn" onclick="selectHaro('green')">緑 / NEMESIS</button>
+    <button type="button" class="btn orange" onclick="selectHaro('orange')">橙 / LOGOS</button>
+    <button type="button" class="btn haro-purple-btn" onclick="selectHaro('purple')">紫 / CHAOS</button>
+    <button type="button" class="btn" id="haro-ear-toggle" onclick="toggleHaroEars()"
+      aria-pressed="true">耳を閉じる</button>
+  </div>
+  <div class="haro-ear-state" id="haro-ear-state" role="status">EAR STATE: OPEN / 承認デザイン表示中</div>
+</section>
 <!-- TRE-UI: 各機能の表示パネル。データ解析・判定の出力先を含む。 -->
 <main class="main">
 <!-- TRE-UI: 架空のCPU/GPU負荷は表示せず、API関連の実用状態を表示。 -->
@@ -401,9 +266,9 @@ function getBallClass(n){return ['ball-white','ball-yellow','ball-green','ball-r
 /** TRE-UI: 番号に対応した色とゼロ埋め2桁表示のDOMを生成。 */
 function ball(n){const el=document.createElement('span');el.className='lotto-ball '+getBallClass(n);el.textContent=String(n).padStart(2,'0');return el}
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
-const agentNames={orange:'LOGOS',blue:'CHAOS',green:'NEMESIS'};
+const agentNames={orange:'LOGOS',purple:'CHAOS',green:'NEMESIS'};
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
-function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',blue:'多様な候補の探索を担当します。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
+function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
 /** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
 function openLoto7Modal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('loto7-modal').classList.add('open')}
 /** TRE-UI: モーダルを閉じ、メイン画面へ復帰。 */
@@ -442,6 +307,34 @@ function sendChatMessage(){const input=$('chat-input');const message=input.value
  * - ブラウザTTSのPCM音声波形は直接取得できないため、振幅との完全同期ではなく
  *   発話時間および語句境界に基づく近似同期とする。
  */
+
+/**
+ * 承認デザインの耳の開閉状態を表示する。
+ * 「耳を閉じる／耳を開く」は、承認済みの開状態アートと閉状態アートの切替。
+ * 発話中は開状態が優先される。各ハロは透明のヒット領域から選択できる。
+ */
+let haroEarPreviewOpen=true;
+function updateHaroEars(){
+  const stage=$('haro-art-stage');
+  const isOpen=haroEarPreviewOpen || !!stage.dataset.speaker;
+  stage.classList.toggle('ears-open',isOpen);
+  $('haro-ear-state').textContent='EAR STATE: '+(isOpen?'OPEN / 内部機構':'CLOSED / 外装パネル');
+  $('haro-ear-toggle').textContent=haroEarPreviewOpen?'耳を閉じる':'耳を開く';
+  $('haro-ear-toggle').setAttribute('aria-pressed',String(haroEarPreviewOpen));
+}
+function toggleHaroEars(){
+  haroEarPreviewOpen=!haroEarPreviewOpen;
+  updateHaroEars();
+}
+/** 発話を担当するハロだけに目の発光を追加して、開閉表示を連動する。 */
+function setHaroArtSpeaking(id,enabled){
+  const stage=$('haro-art-stage');
+  if(!stage)return;
+  if(enabled){stage.dataset.speaker=id;}
+  else if(stage.dataset.speaker===id){stage.dataset.speaker='';}
+  updateHaroEars();
+}
+
 class HaroSpeechController {
   constructor(){
     this.synth=('speechSynthesis' in window)?window.speechSynthesis:null;
@@ -535,6 +428,7 @@ class HaroSpeechController {
     const el=$('pod-'+id);
     if(!el)return;
     el.classList.toggle('speaking',enabled);
+    setHaroArtSpeaking(id,enabled);
     if(!enabled)el.classList.remove('voice-accent');
   }
   _accent(id){
@@ -576,7 +470,7 @@ class HaroSpeechController {
       // キャラクターの「短く元気なロボット調」を再現。特定の声優音声の複製はしない。
       // 録画の印象を元に高めのピッチ・速めのテンポを標準に設定。
       // 3体ごとに微小な個性差を加えつつ、画面のスライダーで調整できる。
-      const profiles={orange:[1.00,1.00],blue:[.96,.92],green:[.94,1.06]};
+      const profiles={orange:[1.00,1.00],purple:[1.10,.89],green:[.94,1.06]};
       const [rateFactor,pitchFactor]=profiles[id]||profiles.orange;
       utterance.rate=Math.max(.6,Math.min(2,this.settings.rate*rateFactor));
       utterance.pitch=Math.max(.5,Math.min(2,this.settings.pitch*pitchFactor));
@@ -826,7 +720,7 @@ async function readDebateAloud(){
     addLog('orange','音声を使うときは「おーい、ハロ」で起動してください。');
     return;
   }
-  const haroByAgent={LOGOS:'orange',CHAOS:'blue',NEMESIS:'green'};
+  const haroByAgent={LOGOS:'orange',CHAOS:'purple',NEMESIS:'green'};
   // 発話中に「音声停止」が押されたら残りのハロを発話させない。
   const cycle=++voiceAssistant.readCycle;
   for(const verdict of currentData.debate.second_round){
@@ -889,7 +783,7 @@ function bootHaroSystem(){
   $('boot-screen').setAttribute('aria-hidden','true');
   voiceAssistant.awake=true;
   currentHaro='orange';
-  const startupMessage='3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・ブルー、同期完了';
+  const startupMessage='3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・パープル、同期完了';
   addLog('orange','[AIハロ起動] '+startupMessage);
   // 「AIハロ起動」クリックの同期的なイベント処理中に speak() を開始する。
   haroSpeech.say(startupMessage,'orange');
