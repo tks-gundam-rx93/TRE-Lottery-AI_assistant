@@ -6,3 +6,8 @@ __pycache__/
 .env
 *.pt
 *.onnx
+# ローカルMySQLの認証情報をGitHubへ公開しない
+config/local.env.cmd
+.env
+.env.*
+!.env.example
