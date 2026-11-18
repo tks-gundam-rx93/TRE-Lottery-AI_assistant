@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tre-lottery-ai-assistant"
+version = "0.1.0"
+description = "LOTO7 statistical analysis, deep learning research and three-agent review"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dl = ["torch>=2.2"]
+
+[tool.setuptools.packages.find]
+include = ["lottery_ai*"]
