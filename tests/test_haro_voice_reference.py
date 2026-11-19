@@ -9,10 +9,10 @@ def test_artwork_open_closed_uses_approved_frames():
     source = UI.read_text(encoding="utf-8")
     assert source.count('src="/assets/haro-approved.webp"') == 1
     assert source.count('src="/assets/haro-closed-stage.webp"') == 1
-    assert "transition:opacity .68s" in source
-    assert "class=\"haro-art-stage ears-open\"" in source
+    assert "@keyframes haro-voice-ear-cycle" in source
+    assert "class=\"haro-art-stage\"" in source
     assert 'id="haro-ear-state"' in source
-    assert "EAR STATE: " in source
+    assert "IDLE / 耳 CLOSED" in source
 
 
 def test_voice_timing_moves_reference_art():
@@ -30,6 +30,8 @@ def test_voice_timing_moves_reference_art():
         "data-speaker=\"orange\"",
         "data-speaker=\"purple\"",
         "data-speaker=\"green\"",
+        ".haro-art-stage.talking .haro-art-closed",
+        "function previewHaroMotion()",
     ):
         assert required in source
 
