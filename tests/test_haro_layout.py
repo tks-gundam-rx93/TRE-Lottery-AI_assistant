@@ -1,58 +1,79 @@
-"""承認済みハロ画像を使ったPC・スマホ共通UIの回帰テスト。"""
+"""ハロ3体のSVGパーツ・レスポンシブ配置・音声同期に関する回帰テスト。"""
 from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-PAGE = ROOT / "web" / "index.html"
-ASSET_DIR = ROOT / "web" / "assets"
+HTML = ROOT / "web" / "index.html"
 
 
-def test_approved_artwork_is_in_repository():
-    """画像は外部URLではなく、ユーザー承認済みのアセットをリポジトリで配信する。"""
-    for name in ("haro-approved.webp", "haro-open.webp", "haro-closed-stage.webp"):
-        path = ASSET_DIR / name
-        data = path.read_bytes()
-        assert data[:4] == b"RIFF" and data[8:12] == b"WEBP"
-        assert 5_000 < len(data) < 400_000
+def page():
+    return HTML.read_text(encoding="utf-8")
 
 
-def test_three_visible_units_and_purple_replaces_blue():
-    """青は使わず、緑・橙・紫のヒット領域を用意する。"""
-    html = PAGE.read_text(encoding="utf-8")
+def unit_svg(source, color):
+    match = re.search(
+        rf'<button type="button" class="haro-unit haro-{color}(?: selected)?" '
+        rf'id="pod-{color}"[\s\S]*?(<svg class="haro-vector"[\s\S]*?</svg>)',
+        source,
+    )
+    assert match, f"{color} unit missing"
+    return match.group(1)
+
+
+def test_no_images_are_used_for_characters():
+    """写真や画像をそのまま表示せず、独立したSVG要素から構成する。"""
+    html = page()
+    assert "<img " not in html
+    assert "haro-approved.webp" not in html
+    assert "haro-closed-stage.webp" not in html
+    assert html.count('<svg class="haro-vector"') == 3
+    assert "class HaroVectorMotionController" in html
+
+
+def test_three_units_have_identical_mechanics_and_separate_color():
+    """球体・閉耳外板・ヒンジ・耳内機構・目・台座の形状を3体で共通化。"""
+    html = page()
     for color in ("green", "orange", "purple"):
-        assert html.count(f'id="pod-{color}"') == 1
-        assert f"selectHaro('{color}')" in html
+        svg = unit_svg(html, color)
+        assert 'viewBox="0 0 320 330"' in svg
+        assert 'class="haro-shell"' in svg
+        assert 'class="ear-cavity"' in svg
+        assert 'class="hatch hatch-left"' in svg
+        assert 'class="hatch hatch-right"' in svg
+        assert 'class="hatch-leaf"' in svg
+        assert 'class="eye-pair"' in svg
+        assert 'class="eye"' in svg
+        assert 'class="ear-mirror"' in svg
     assert 'id="pod-blue"' not in html
     assert "purple:'CHAOS'" in html
     assert "サブ・パープル、同期完了" in html
 
 
-def test_reference_layout_and_ear_state_controls():
-    """開耳画像と閉耳画像を滑らかに切り替え、音声中は開状態を優先する。"""
-    html = PAGE.read_text(encoding="utf-8")
-    for expected in (
-        'class="haro-art-stage"',
-        'src="/assets/haro-approved.webp"',
-        'src="/assets/haro-closed-stage.webp"',
-        'id="haro-motion-test"',
-        "function updateHaroEars()",
-        "function previewHaroMotion()",
-        "function setHaroArtSpeaking(id,enabled)",
-        ".haro-art-stage.talking .haro-art-closed",
-        "aspect-ratio:1448/740",
-        "@media(max-width:500px)",
+def test_center_front_perspective_and_responsive_design():
+    html = page()
+    assert "#pod-green{left:3%;bottom:4%;z-index:1}" in html
+    assert "#pod-purple{right:3%;bottom:4%;z-index:2}" in html
+    assert "#pod-orange{left:50%;--haro-x:-50%;bottom:0;z-index:3}" in html
+    assert ".haro-unit{position:absolute" in html
+    assert "@media(max-width:560px)" in html
+    assert ".haro-arena{height:clamp(230px,73vw,330px)" in html
+
+
+def test_speaking_drives_real_hinge_rotation_instead_of_image_fading():
+    html = page()
+    for required in (
+        "@keyframes hatch-swing-left",
+        "@keyframes hatch-swing-right",
+        "transform-origin:88px 88px",
+        "transform:rotate(96deg)",
+        "transform:rotate(94deg)",
+        ".haro-unit.speaking .hatch-left",
+        ".haro-unit.speaking .hatch-right",
+        ".haro-unit.speaking .eye-pair",
+        "haroVisual.setSpeaker(id,enabled)",
+        "const current=stage.dataset.speaker||''",
+        "IDLE / 耳 CLOSED",
     ):
-        assert expected in html
-    assert "const talking=!!stage.dataset.speaker;" in html
-
-
-def test_speech_glows_only_current_speaker():
-    """発話中の選択ハロに対応する2つの目だけ発光する。"""
-    html = PAGE.read_text(encoding="utf-8")
-    for color in ("green", "orange", "purple"):
-        assert len(re.findall(rf'<i class="haro-eye-pulse {color}"', html)) == 2
-        assert f'data-speaker="{color}"' in html
-    assert "setHaroArtSpeaking(id,enabled);" in html
-    assert "class HaroSpeechController" in html
-    assert "class HaroVoiceAssistant" in html
-    assert "haroSpeech.say('タカシ、元気か？','orange')" in html
+        assert required in html
+    assert "haroEarPreviewOpen" not in html
+    assert "haro-art-closed" not in html
