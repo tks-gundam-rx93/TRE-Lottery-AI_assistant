@@ -161,6 +161,40 @@ def home():
     return FileResponse(Path(__file__).parent / 'web' / 'index.html', media_type='text/html')
 
 
+# Explicit public shell assets only; CSV/session data are never exposed as static files.
+PWA_FILES = {
+    '/manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json'),
+    '/pwa.js': ('pwa.js', 'application/javascript'),
+    '/sw.js': ('sw.js', 'application/javascript'),
+    '/icons/icon-192.png': ('icons/icon-192.png', 'image/png'),
+    '/icons/icon-512.png': ('icons/icon-512.png', 'image/png'),
+    '/icons/maskable-512.png': ('icons/maskable-512.png', 'image/png'),
+    '/icons/apple-touch-icon.png': ('icons/apple-touch-icon.png', 'image/png'),
+}
+
+
+def pwa_asset(filename: str, media_type: str):
+    def serve():
+        return FileResponse(Path(__file__).parent / 'web' / filename, media_type=media_type,
+                            headers={'Cache-Control': 'no-cache'})
+    return serve
+
+
+for asset_path, (filename, media_type) in PWA_FILES.items():
+    app.add_api_route(asset_path, pwa_asset(filename, media_type), methods=['GET'], include_in_schema=False)
+
+
+@app.middleware('http')
+async def cache_policy(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
+    elif request.url.path == '/':
+        response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @app.get('/api/health')
 def health():
     # DBが未起動でもAPIプロセスを止めず、UIに接続状態を返す。
