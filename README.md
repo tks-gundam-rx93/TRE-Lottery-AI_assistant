@@ -108,3 +108,9 @@ Web Speech APIの発話開始・語句境界・終了に加え、語句境界イ
 - ピッチ・話速・電子音、起動UI、予測機能、CSV/MySQLの処理は従来のまま維持。
 
 「耳を閉じた絵／開いた絵」を切替える実装ではなく、SVGのハッチ要素へCSSの`transform: rotate(...)`を適用しています。すべてのSVG形状はソースコード内の日本語コメント付きです。
+
+## iPhoneのホーム画面から起動するPWA（2026-11-19）
+
+既存の公開先は https://tre-lottery-ai-assistant.onrender.com/ です。PWA対応を公開サービスへ反映した後、**Safari → 共有 → ホーム画面に追加 → 追加**でインストールできます。ホーム画面のアイコンから起動し「AIハロ起動」をタップしてください。
+
+manifest・Apple touch icon・Service Worker・safe-area対応と、追加案内・更新通知を実装しています。オフラインでは画面を再起動でき、予測とCSV取込は通信が必要です。API/CSV/予測結果はオフラインキャッシュに保存しません。詳細と実機確認事項は [iPhone PWA手順](docs/iphone_pwa.md) を参照してください。GitHub保存・Render公開・iPhone実機受入は別々に確認します。
