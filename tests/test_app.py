@@ -54,16 +54,22 @@ def test_expired_session_rejected():
 def test_invalid_bounds():
     assert client.post('/api/predict', json={'count': 999}).status_code == 422
 
-def test_vector_haro_interface_served():
-    """キャラクターの画像ファイルを使わず、3体ともSVGとして配信する。"""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert 'id="pod-green"' in response.text
-    assert 'id="pod-orange"' in response.text
-    assert 'id="pod-purple"' in response.text
-    assert 'id="pod-blue"' not in response.text
-    assert response.text.count('class="haro-vector"') == 3
-    assert '<img ' not in response.text
-    assert 'class="hatch hatch-left"' in response.text
-    assert 'class="hatch hatch-right"' in response.text
-    assert 'class HaroVectorMotionController' in response.text
+def test_gif_haro_interface_and_assets_served():
+    """HTMLとGIF・WebPが同じAPIサーバーから配信されること。"""
+    page = client.get("/")
+    assert page.status_code == 200
+    for name in ("green", "orange", "purple"):
+        assert f'id="pod-{name}"' in page.text
+    assert 'id="pod-blue"' not in page.text
+    assert '<svg class="haro-vector"' not in page.text
+    assert 'src="/assets/haro-idle.webp"' in page.text
+    assert "class HaroGifPlaybackController" in page.text
+
+    gif = client.get("/assets/haro-speaking.gif")
+    idle = client.get("/assets/haro-idle.webp")
+    assert gif.status_code == 200
+    assert gif.headers['content-type'].startswith('image/gif')
+    assert gif.content[:6] in (b"GIF89a", b"GIF87a")
+    assert idle.status_code == 200
+    assert idle.content[:4] == b"RIFF"
+    assert idle.content[8:12] == b"WEBP"
