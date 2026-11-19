@@ -74,6 +74,9 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
  padding:9px 8px;background:#081625;border:1px solid #24526b}
 .haro-art-controls .btn{font-size:11px;padding:8px 10px}
 .haro-art-controls .haro-purple-btn{border-color:#b474eb;color:#e0c7ff}
+.haro-speed-label{display:flex;align-items:center;gap:6px;color:#b8d8e8;font-size:11px}
+.haro-speed-label select{color:#e8f9ff;border:1px solid #366a81;border-radius:4px;background:#09283d;
+ padding:6px 8px;font-size:11px;max-width:210px}
 .haro-ear-state{text-align:center;padding:7px;background:#040b16;color:#c5edff;font-size:10px}
 .haro-method-note{font-size:10px;line-height:1.6;color:#86acc2;text-align:center;padding:5px 8px 10px;background:#040b16}
 .msg.purple{border-color:#a769ed;background:#8738c426}
@@ -120,6 +123,13 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
     <button class="btn haro-purple-btn" type="button" onclick="selectHaro('purple')">紫 / CHAOS</button>
     <button class="btn" type="button" id="haro-motion-test" onclick="previewHaroMotion()"
       aria-label="ハロGIFを約5秒間再生して待機状態へ戻す">耳・目の動作テスト</button>
+    <!-- GIFはCSSの再生速度指定が使えないため、遅延時間を編集した2種類のGIFを選択する。 -->
+    <label class="haro-speed-label" for="haro-speed">耳の速度
+      <select id="haro-speed" onchange="haroVisual.setPlaybackMode(this.value)">
+        <option value="fast" selected>高速（開く速さ 約2倍）</option>
+        <option value="normal">標準（元の速度）</option>
+      </select>
+    </label>
   </div>
   <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話時のみGIF再生）</div>
   <div class="haro-method-note">方式1：発話者の選択はチャットへ反映。アニメーションは3体が同時に動くGIFです。</div>
@@ -269,9 +279,44 @@ class HaroGifPlaybackController {
     this.previewTimer=null;
     this.speaker=null;
     this.generation=0;
+    // 高速が標準。元GIFも残しているため比較／変更可能。
+    this.playbackMode='fast';
   }
   get stage(){return $(this.stageId);}
   get animation(){return $('haro-animation');}
+  get gifPath(){
+    return this.playbackMode==='fast'
+      ? '/assets/haro-speaking-fast.gif'
+      : '/assets/haro-speaking.gif';
+  }
+  /**
+   * 速度の選択を保持。発話中に変更してもタイマーを解除せず、
+   * 現在のGIFだけ先頭フレームから切り替える。
+   */
+  setPlaybackMode(value){
+    if(value!=='fast'&&value!=='normal')return;
+    this.playbackMode=value;
+    if(this.speaker)this._startGif(this.speaker);
+    this.sync();
+  }
+  /** ファイルを切り替えてGIFを最初のフレームから再生する。 */
+  _startGif(id){
+    const stage=this.stage;
+    const gif=this.animation;
+    stage.classList.remove('loaded');
+    gif.hidden=false;
+    const serial=++this.generation;
+    gif.onload=()=>{
+      if(serial===this.generation&&this.speaker===id)stage.classList.add('loaded');
+    };
+    gif.onerror=()=>{
+      if(serial===this.generation){
+        this._idle();
+        $('haro-ear-state').textContent='GIF読み込み失敗。静止画像へ戻りました。';
+      }
+    };
+    gif.src=this.gifPath+'?play='+serial;
+  }
   stopPreview(){
     clearTimeout(this.previewTimer);
     this.previewTimer=null;
@@ -284,23 +329,8 @@ class HaroGifPlaybackController {
       // 新しい読み上げは常にGIFを先頭フレームから再生する。
       this.speaker=id;
       stage.dataset.speaker=id;
-      stage.classList.remove('loaded');
       stage.classList.add('talking');
-      const gif=this.animation;
-      gif.hidden=false;
-      const serial=++this.generation;
-      gif.onload=()=>{
-        if(serial===this.generation&&this.speaker===id){
-          stage.classList.add('loaded');
-        }
-      };
-      gif.onerror=()=>{
-        if(serial===this.generation){
-          this._idle();
-          $('haro-ear-state').textContent='GIF読み込み失敗。静止画像へ戻りました。';
-        }
-      };
-      gif.src='/assets/haro-speaking.gif?play='+serial;
+      this._startGif(id);
     }else if(this.speaker===id){
       this._idle();
     }
@@ -320,15 +350,16 @@ class HaroGifPlaybackController {
   sync(){
     const speaker=this.speaker;
     $('haro-speaker-indicator').textContent=speaker?'VOICE / '+agentNames[speaker]:'';
+    const speed=this.playbackMode==='fast'?'高速・1周1.02秒':'標準・1周1.44秒';
     $('haro-ear-state').textContent=speaker
-      ? 'SPEAKING / GIF 8 frames・耳 OPEN ⇄ CLOSED・目 GLOW / '+agentNames[speaker]
-      : 'IDLE / 耳 CLOSED（発話時のみGIF再生）';
+      ? 'SPEAKING / '+speed+'・耳 OPEN ⇄ CLOSED・目 GLOW / '+agentNames[speaker]
+      : 'IDLE / 耳 CLOSED（'+speed+'／発話時のみGIF再生）';
   }
   preview(){
     if(haroSpeech.speaking)return;
     const selected=currentHaro||'orange';
     this.setSpeaker(selected,true);
-    // 1周1.44秒のGIFを約3周させて、必ず静止状態へ戻す。
+    // 高速GIFは1周1.02秒。約4.6秒の動作テスト後に閉耳へ戻す。
     this.previewTimer=setTimeout(()=>{
       if(!haroSpeech.speaking){
         this.setSpeaker(selected,false);
