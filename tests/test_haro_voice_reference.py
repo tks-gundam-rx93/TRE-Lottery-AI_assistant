@@ -1,49 +1,41 @@
-"""参考画像を基準にした可動ハッチとWeb Speech APIの連動テスト。"""
+"""方式1のWeb SpeechとGIF再生連動のテスト。"""
 from pathlib import Path
 
-UI = Path(__file__).resolve().parents[1] / "web" / "index.html"
+SOURCE = Path(__file__).resolve().parents[1] / "web" / "index.html"
 
 
-def test_hinges_have_inner_mechanisms_and_real_rotation():
-    html = UI.read_text(encoding="utf-8")
-    assert html.count('class="ear-cavity"') == 6
-    assert html.count('class="hatch-leaf"') == 6
-    assert html.count('class="eye-pair"') == 3
-    assert html.count('class="hatch hatch-left"') == 3
-    assert html.count('class="hatch hatch-right"') == 3
-    assert 'class="ear-mirror"' in html
-    assert "hatch-swing-left" in html
-    assert "hatch-swing-right" in html
-    assert "class HaroVectorMotionController" in html
-
-
-def test_speech_timing_animation_starts_and_stops():
-    html = UI.read_text(encoding="utf-8")
-    for required in (
-        "utterance.onstart",
-        "utterance.onboundary",
-        "utterance.onend",
-        "_startCadence(rate)",
-        "clearInterval(this.pulseTimer)",
-        "this._setFace(id,true)",
-        "this._setFace(id,false)",
+def test_voice_events_manage_gif_lifecycle():
+    """TTS開始後にGIFを再生、読み上げ終了・停止時に閉耳へ戻す。"""
+    html = SOURCE.read_text(encoding="utf-8")
+    for token in (
+        "utterance.onstart", "utterance.onboundary", "utterance.onend",
+        "this._setFace(id,true)", "this._setFace(id,false)",
         "setHaroArtSpeaking(id,enabled)",
-        ".classList.toggle('speaking'",
-        "stage.dataset.speaker=''",
-        "function previewHaroMotion()",
-        "haroVisual.preview()",
+        "class HaroGifPlaybackController",
+        "haroVisual.setSpeaker(id,enabled)",
+        "gif.onerror", "gif.onload",
+        "gif.removeAttribute('src')",
     ):
-        assert required in html
+        assert token in html
 
 
-def test_voice_controls_remain_available():
-    html = UI.read_text(encoding="utf-8")
-    for ident in ("voice-pitch", "voice-rate", "voice-chirp", "voice-pitch-label", "voice-rate-label"):
+def test_browser_voice_settings_preserved():
+    html = SOURCE.read_text(encoding="utf-8")
+    for ident in ("voice-pitch", "voice-rate", "voice-chirp",
+                  "voice-pitch-label", "voice-rate-label"):
         assert html.count(f'id="{ident}"') == 1
-    for method in (
-        "armAudio(){", "_chirp(){", "updateSettings(save=true){",
-        "restoreSettings(){", "preview(){",
-        "tre_haro_voice_settings", "new SpeechSynthesisUtterance",
-        "let startGuard=null;", "3500"
+    for token in (
+        "armAudio(){", "_chirp(){", "restoreSettings(){",
+        "preview(){", "new SpeechSynthesisUtterance",
+        "tre_haro_voice_settings", "let startGuard=null;"
     ):
-        assert method in html
+        assert token in html
+
+
+def test_selected_agent_not_confused_with_gif_animation():
+    """誰が発話中かは保持するが、GIFの3体は分離して動かせないことを明示。"""
+    html = SOURCE.read_text(encoding="utf-8")
+    assert "this.speaker=id" in html
+    assert "stage.dataset.speaker=id" in html
+    assert "3体の個別アニメーション制御が必要なら方式2" in html
+    assert "3体が同時に動くGIF" in html
