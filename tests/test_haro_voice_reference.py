@@ -12,8 +12,8 @@ def test_hinges_have_inner_mechanisms_and_real_rotation():
     assert html.count('class="hatch hatch-left"') == 3
     assert html.count('class="hatch hatch-right"') == 3
     assert 'class="ear-mirror"' in html
-    assert "hatch-swing-left" in html
-    assert "hatch-swing-right" in html
+    assert "haro-ear-hinge-left" in html
+    assert "haro-ear-hinge-right" in html
     assert "class HaroVectorMotionController" in html
 
 
