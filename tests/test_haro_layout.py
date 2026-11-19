@@ -1,79 +1,67 @@
-"""ハロ3体のSVGパーツ・レスポンシブ配置・音声同期に関する回帰テスト。"""
+"""方式1：GIF + 待機静止画の描画・状態管理の回帰テスト。"""
 from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-HTML = ROOT / "web" / "index.html"
+PAGE = ROOT / "web" / "index.html"
+ASSETS = ROOT / "web" / "assets"
 
 
-def page():
-    return HTML.read_text(encoding="utf-8")
+def html_text():
+    return PAGE.read_text(encoding="utf-8")
 
 
-def unit_svg(source, color):
-    match = re.search(
-        rf'<button type="button" class="haro-unit haro-{color}(?: selected)?" '
-        rf'id="pod-{color}"[\s\S]*?(<svg class="haro-vector"[\s\S]*?</svg>)',
-        source,
-    )
-    assert match, f"{color} unit missing"
-    return match.group(1)
+def test_original_8_frame_gif_is_preserved():
+    """生成された原GIFを改変せずに保存し、180ms×8フレームを検証する。"""
+    content = (ASSETS / "haro-speaking.gif").read_bytes()
+    assert content[:6] in (b"GIF89a", b"GIF87a")
+    assert int.from_bytes(content[6:8], "little") == 507
+    assert int.from_bytes(content[8:10], "little") == 378
+    blocks = re.findall(rb"\x21\xf9\x04.{1}(.{2})", content, re.DOTALL)
+    assert len(blocks) == 8
+    assert [int.from_bytes(block, "little") for block in blocks] == [18] * 8
 
 
-def test_no_images_are_used_for_characters():
-    """写真や画像をそのまま表示せず、独立したSVG要素から構成する。"""
-    html = page()
-    assert "<img " not in html
-    assert "haro-approved.webp" not in html
-    assert "haro-closed-stage.webp" not in html
-    assert html.count('<svg class="haro-vector"') == 3
-    assert "class HaroVectorMotionController" in html
+def test_idle_image_is_webp_first_frame():
+    """待機画像は同じ寸法のWebPで、発話時以外はGIFを表示しない。"""
+    content = (ASSETS / "haro-idle.webp").read_bytes()
+    assert content[:4] == b"RIFF"
+    assert content[8:12] == b"WEBP"
+    html = html_text()
+    assert 'src="/assets/haro-idle.webp"' in html
+    assert 'id="haro-animation"' in html
+    assert 'haro-animation' in html
+    assert 'hidden>' in html
+    assert '<svg class="haro-vector"' not in html
+    assert "class HaroGifPlaybackController" in html
 
 
-def test_three_units_have_identical_mechanics_and_separate_color():
-    """球体・閉耳外板・ヒンジ・耳内機構・目・台座の形状を3体で共通化。"""
-    html = page()
-    for color in ("green", "orange", "purple"):
-        svg = unit_svg(html, color)
-        assert 'viewBox="0 0 320 330"' in svg
-        assert 'class="haro-shell"' in svg
-        assert 'class="ear-cavity"' in svg
-        assert 'class="hatch hatch-left"' in svg
-        assert 'class="hatch hatch-right"' in svg
-        assert 'class="hatch-leaf"' in svg
-        assert 'class="eye-pair"' in svg
-        assert 'class="eye"' in svg
-        assert 'class="ear-mirror"' in svg
+def test_three_agents_and_mobile_interactive_hotspots():
+    """1枚のGIF上に、オレンジ・緑・紫の独立した選択操作を重ねる。"""
+    html = html_text()
+    for name in ("green", "orange", "purple"):
+        assert html.count(f'id="pod-{name}"') == 1
+        assert f"selectHaro('{name}')" in html
     assert 'id="pod-blue"' not in html
+    assert '.stage.gif-stage{height:auto}' in html
+    assert '@media(max-width:560px)' in html
     assert "purple:'CHAOS'" in html
-    assert "サブ・パープル、同期完了" in html
 
 
-def test_center_front_perspective_and_responsive_design():
-    html = page()
-    assert "#pod-green{left:3%;bottom:4%;z-index:1}" in html
-    assert "#pod-purple{right:3%;bottom:4%;z-index:2}" in html
-    assert "#pod-orange{left:50%;--haro-x:-50%;bottom:0;z-index:3}" in html
-    assert ".haro-unit{position:absolute" in html
-    assert "@media(max-width:560px)" in html
-    assert ".haro-arena{height:clamp(230px,73vw,330px)" in html
-
-
-def test_speaking_drives_real_hinge_rotation_instead_of_image_fading():
-    html = page()
-    for required in (
-        "@keyframes hatch-swing-left",
-        "@keyframes hatch-swing-right",
-        "transform-origin:88px 88px",
-        "transform:rotate(96deg)",
-        "transform:rotate(94deg)",
-        ".haro-unit.speaking .hatch-left",
-        ".haro-unit.speaking .hatch-right",
-        ".haro-unit.speaking .eye-pair",
+def test_animation_only_playing_when_speaking():
+    """通常は静止画、音声開始時だけGIFを読み、終了時にsrcを解除する。"""
+    html = html_text()
+    for expected in (
+        "setSpeaker(id,enabled)",
+        "stage.classList.add('talking')",
+        "gif.src='/assets/haro-speaking.gif?play='+serial",
+        "gif.removeAttribute('src')",
+        "gif.hidden=true",
+        "stage.classList.remove('talking','loaded','voice-accent')",
         "haroVisual.setSpeaker(id,enabled)",
-        "const current=stage.dataset.speaker||''",
-        "IDLE / 耳 CLOSED",
+        "function previewHaroMotion()",
+        "},4600);",
     ):
-        assert required in html
-    assert "haroEarPreviewOpen" not in html
-    assert "haro-art-closed" not in html
+        assert expected in html
+    assert "1周1.44秒" in html
+    assert "3体が同時に動くGIF" in html
