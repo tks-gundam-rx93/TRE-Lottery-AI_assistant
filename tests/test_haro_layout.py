@@ -31,19 +31,19 @@ def test_reference_layout_and_ear_state_controls():
     """開耳画像と閉耳画像を滑らかに切り替え、音声中は開状態を優先する。"""
     html = PAGE.read_text(encoding="utf-8")
     for expected in (
-        'class="haro-art-stage ears-open"',
+        'class="haro-art-stage"',
         'src="/assets/haro-approved.webp"',
         'src="/assets/haro-closed-stage.webp"',
-        'id="haro-ear-toggle"',
+        'id="haro-motion-test"',
         "function updateHaroEars()",
-        "function toggleHaroEars()",
+        "function previewHaroMotion()",
         "function setHaroArtSpeaking(id,enabled)",
-        ".haro-art-stage.ears-open .haro-art-closed",
-        "aspect-ratio:1448/1086",
+        ".haro-art-stage.talking .haro-art-closed",
+        "aspect-ratio:1448/740",
         "@media(max-width:500px)",
     ):
         assert expected in html
-    assert "haroEarPreviewOpen || !!stage.dataset.speaker" in html
+    assert "const talking=!!stage.dataset.speaker;" in html
 
 
 def test_speech_glows_only_current_speaker():
