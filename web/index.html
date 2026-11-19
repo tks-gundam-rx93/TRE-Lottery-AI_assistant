@@ -113,13 +113,24 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 :root{--purple:#8551dc}
 .stage.reference-stage{height:auto;max-width:960px;margin:0 auto;overflow:visible;border-bottom:0;background:#0a1427}
 .stage.reference-stage:before,.stage.reference-stage:after{display:none}
-.haro-art-stage{position:relative;width:100%;aspect-ratio:1448/1086;isolation:isolate;overflow:hidden;background:#0a172c}
-.haro-art-approved{display:block;width:100%;height:100%;object-fit:fill}
-.haro-art-closed{position:absolute;top:0;left:0;width:100%;height:68.23%;object-fit:fill;opacity:1;pointer-events:none;
-  transform:translateY(0) scale(1);transform-origin:center 70%;
-  transition:opacity .68s ease-in-out,transform .76s cubic-bezier(.2,.7,.2,1);z-index:2}
-.haro-art-stage.ears-open .haro-art-closed{opacity:0;transform:translateY(2%) scale(.97)}
-.haro-art-stage .art-hitbox{position:absolute;top:18%;bottom:auto;width:29%;height:45%;aspect-ratio:auto;
+.haro-art-stage{position:relative;width:100%;aspect-ratio:1448/740;isolation:isolate;overflow:hidden;background:#0a172c}
+.haro-art-approved{display:block;width:100%;height:auto;position:absolute;top:0;left:0;pointer-events:none}
+/* CLOSED is the default: keep body fixed. While talking fade the closed ears in/out over open artwork. */
+.haro-art-closed{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:1;
+  pointer-events:none;z-index:2;will-change:opacity}
+@keyframes haro-voice-ear-cycle {
+  0%,100%{opacity:1}
+  12%{opacity:.83}
+  26%,54%{opacity:0}
+  65%{opacity:.3}
+  82%{opacity:1}
+}
+/* Opening/closing repeats only during an actual speech utterance or explicit motion test. */
+.haro-art-stage.talking .haro-art-closed {
+  animation:haro-voice-ear-cycle 1.04s ease-in-out infinite;
+}
+.haro-art-stage.talking.voice-accent .haro-art-closed {animation-duration:.65s}
+.haro-art-stage .art-hitbox{position:absolute;top:23%;bottom:auto;width:29%;height:62%;aspect-ratio:auto;
  background:transparent;border:0;transform:none;filter:none;z-index:10;opacity:1}
 .haro-art-stage .art-hitbox:hover,.haro-art-stage .art-hitbox.selected{transform:none;filter:none}
 .haro-art-stage .art-hitbox:hover{box-shadow:inset 0 0 20px rgba(255,255,255,.12)}
@@ -133,19 +144,19 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 .haro-art-controls .haro-purple-btn{border-color:#a567fd;color:#d8b7ff}
 .haro-ear-state{text-align:center;background:#040d1a;font-size:10px;color:#bceeff;padding:5px}
 .haro-eye-pulses{position:absolute;inset:0;pointer-events:none;z-index:5}
-.haro-eye-pulse{position:absolute;left:var(--x);top:var(--y);width:2%;height:3%;border-radius:50%;
+.haro-eye-pulse{position:absolute;left:var(--x);top:var(--y);width:2%;height:4%;border-radius:50%;
  background:var(--eye);filter:blur(5px);box-shadow:0 0 18px 8px var(--eye);opacity:0;transform:translate(-50%,-50%)}
 @keyframes haro-approved-eye-pulse{0%,100%{opacity:.12;transform:translate(-50%,-50%) scale(.75)}
   35%{opacity:.9;transform:translate(-50%,-50%) scale(1.22)}
   65%{opacity:.3;transform:translate(-50%,-50%) scale(.9)}}
-.haro-art-stage[data-speaker="green"] .haro-eye-pulse.green,
-.haro-art-stage[data-speaker="orange"] .haro-eye-pulse.orange,
-.haro-art-stage[data-speaker="purple"] .haro-eye-pulse.purple{
+.haro-art-stage.talking[data-speaker="green"] .haro-eye-pulse.green,
+.haro-art-stage.talking[data-speaker="orange"] .haro-eye-pulse.orange,
+.haro-art-stage.talking[data-speaker="purple"] .haro-eye-pulse.purple{
  animation:haro-approved-eye-pulse .28s ease-in-out infinite}
 .msg.purple{border-color:#9e64ff;background:rgba(133,81,220,.13)}
 @media(max-width:500px){.stage.reference-stage{height:auto}.haro-art-controls .btn{font-size:9px;padding:6px 7px}
  .haro-ear-state{font-size:9px}}
-@media(prefers-reduced-motion:reduce){.haro-art-closed{transition:none}
+@media(prefers-reduced-motion:reduce){.haro-art-stage.talking .haro-art-closed{animation-duration:2.1s}
  .haro-eye-pulse{animation:none!important}}
 </style>
 </head>
@@ -159,22 +170,22 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
 <!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <section class="stage reference-stage" aria-label="承認済みハロ3体の開閉アートワーク">
-  <div class="haro-art-stage ears-open" id="haro-art-stage" data-speaker="" data-selected="orange">
-    <!-- 開いた耳はオレンジ中央前面、緑左後方、紫右後方。隣同士の耳の重なりも承認デザイン通り。 -->
+  <div class="haro-art-stage" id="haro-art-stage" data-speaker="" data-selected="orange">
+    <!-- 通常は閉じた耳の画像を上に重ねる。発話中は下の開耳画像とのブレンドを周期的に行う。 -->
     <img class="haro-art-approved" src="/assets/haro-approved.webp"
       alt="ハロ3体、緑・オレンジ・紫。上段は耳を大きく開き、内部構造が見える状態。下段は耳が閉じた状態。"
       fetchpriority="high">
-    <!-- 耳を閉じたときだけ前面に現れる画像。トランジションは開閉の状態切替を表現。 -->
+    <!-- 通常時に表示する閉耳画像。発話中に開耳画像との切替を繰り返して耳の可動を表現する。 -->
     <img class="haro-art-closed" id="haro-art-closed" src="/assets/haro-closed-stage.webp"
       alt="" aria-hidden="true" loading="eager">
     <!-- 発話中のハロだけ目のグローを強調。ユーザー承認済み画像の上に重ねる。 -->
     <div class="haro-eye-pulses" aria-hidden="true">
-      <i class="haro-eye-pulse green" style="--x:15.9%;--y:32.3%;--eye:#ffcbff"></i>
-      <i class="haro-eye-pulse green" style="--x:19.8%;--y:32.3%;--eye:#ffcbff"></i>
-      <i class="haro-eye-pulse orange" style="--x:45.7%;--y:32.0%;--eye:#ffe2ff"></i>
-      <i class="haro-eye-pulse orange" style="--x:50.9%;--y:32.0%;--eye:#ffe2ff"></i>
-      <i class="haro-eye-pulse purple" style="--x:75.7%;--y:30.8%;--eye:#ff1728"></i>
-      <i class="haro-eye-pulse purple" style="--x:81.8%;--y:30.8%;--eye:#ff1728"></i>
+      <i class="haro-eye-pulse green" style="--x:15.9%;--y:47.4%;--eye:#ffcbff"></i>
+      <i class="haro-eye-pulse green" style="--x:19.8%;--y:47.4%;--eye:#ffcbff"></i>
+      <i class="haro-eye-pulse orange" style="--x:45.7%;--y:46.9%;--eye:#ffe2ff"></i>
+      <i class="haro-eye-pulse orange" style="--x:50.9%;--y:46.9%;--eye:#ffe2ff"></i>
+      <i class="haro-eye-pulse purple" style="--x:75.7%;--y:45.2%;--eye:#ff1728"></i>
+      <i class="haro-eye-pulse purple" style="--x:81.8%;--y:45.2%;--eye:#ff1728"></i>
     </div>
     <!-- 透明のヒット領域。画面を直接タップして担当AIを切り替えられる。 -->
     <button type="button" class="haro art-hitbox" id="pod-green" onclick="selectHaro('green')"
@@ -188,10 +199,10 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
     <button type="button" class="btn" onclick="selectHaro('green')">緑 / NEMESIS</button>
     <button type="button" class="btn orange" onclick="selectHaro('orange')">橙 / LOGOS</button>
     <button type="button" class="btn haro-purple-btn" onclick="selectHaro('purple')">紫 / CHAOS</button>
-    <button type="button" class="btn" id="haro-ear-toggle" onclick="toggleHaroEars()"
-      aria-pressed="true">耳を閉じる</button>
+    <button type="button" class="btn" id="haro-motion-test" onclick="previewHaroMotion()"
+      aria-label="選択中ハロの耳と目の動作を3秒間テスト">耳・目の動作テスト</button>
   </div>
-  <div class="haro-ear-state" id="haro-ear-state" role="status">EAR STATE: OPEN / 承認デザイン表示中</div>
+  <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話中のみ開閉）</div>
 </section>
 <!-- TRE-UI: 各機能の表示パネル。データ解析・判定の出力先を含む。 -->
 <main class="main">
@@ -313,26 +324,45 @@ function sendChatMessage(){const input=$('chat-input');const message=input.value
  * 「耳を閉じる／耳を開く」は、承認済みの開状態アートと閉状態アートの切替。
  * 発話中は開状態が優先される。各ハロは透明のヒット領域から選択できる。
  */
-let haroEarPreviewOpen=true;
+/**
+ * ハロの正しい状態遷移（画面中央は常に1セット）。
+ * - 通常: 3体とも耳を閉じる。目の発光アニメーションなし
+ * - 発話: 話しているハロに対応する目を光らせ、耳の開/閉を連続サイクル
+ * - 終話: アニメーションを解除し必ず閉耳画像へ戻る
+ * 同一の承認画像から2つの耳状態をフレーム補間する方式。
+ */
+let previewMotionTimeout=null;
 function updateHaroEars(){
   const stage=$('haro-art-stage');
-  const isOpen=haroEarPreviewOpen || !!stage.dataset.speaker;
-  stage.classList.toggle('ears-open',isOpen);
-  $('haro-ear-state').textContent='EAR STATE: '+(isOpen?'OPEN / 内部機構':'CLOSED / 外装パネル');
-  $('haro-ear-toggle').textContent=haroEarPreviewOpen?'耳を閉じる':'耳を開く';
-  $('haro-ear-toggle').setAttribute('aria-pressed',String(haroEarPreviewOpen));
+  if(!stage)return;
+  const talking=!!stage.dataset.speaker;
+  stage.classList.toggle('talking',talking);
+  if(!talking)stage.classList.remove('voice-accent');
+  $('haro-ear-state').textContent=talking
+    ? 'SPEAKING / 耳 OPEN ⇄ CLOSED・目 GLOW / '+agentNames[stage.dataset.speaker]
+    : 'IDLE / 耳 CLOSED（発話中のみ開閉）';
 }
-function toggleHaroEars(){
-  haroEarPreviewOpen=!haroEarPreviewOpen;
-  updateHaroEars();
-}
-/** 発話を担当するハロだけに目の発光を追加して、開閉表示を連動する。 */
+/** 実際のWeb Speech API発話開始・終了イベントから呼ばれる。 */
 function setHaroArtSpeaking(id,enabled){
   const stage=$('haro-art-stage');
   if(!stage)return;
-  if(enabled){stage.dataset.speaker=id;}
-  else if(stage.dataset.speaker===id){stage.dataset.speaker='';}
+  if(enabled){
+    clearTimeout(previewMotionTimeout);
+    stage.dataset.speaker=id;
+  }else if(stage.dataset.speaker===id){
+    stage.dataset.speaker='';
+  }
   updateHaroEars();
+}
+/** マイクを使わず耳・目の動作を確認するデモ。3秒後に自動復帰。 */
+function previewHaroMotion(){
+  if(haroSpeech.speaking)return;
+  const selected=currentHaro||'orange';
+  clearTimeout(previewMotionTimeout);
+  setHaroArtSpeaking(selected,true);
+  previewMotionTimeout=setTimeout(()=>{
+    if(!haroSpeech.speaking)setHaroArtSpeaking(selected,false);
+  },3000);
 }
 
 class HaroSpeechController {
@@ -435,8 +465,13 @@ class HaroSpeechController {
     const el=$('pod-'+id);
     if(!el)return;
     el.classList.add('voice-accent');
+    const stage=$('haro-art-stage');
+    if(stage)stage.classList.add('voice-accent');
     clearTimeout(this.accentTimer);
-    this.accentTimer=setTimeout(()=>el.classList.remove('voice-accent'),140);
+    this.accentTimer=setTimeout(()=>{
+      el.classList.remove('voice-accent');
+      if(stage)stage.classList.remove('voice-accent');
+    },140);
   }
   cancel(){
     this.sequence++;
