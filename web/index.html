@@ -119,17 +119,17 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 .haro-art-closed{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:1;
   pointer-events:none;z-index:2;will-change:opacity}
 @keyframes haro-voice-ear-cycle {
+  /* 0-25% 開動作、25-70% 開いた状態、70-100% 閉動作 */
   0%,100%{opacity:1}
-  12%{opacity:.83}
-  26%,54%{opacity:0}
-  65%{opacity:.3}
-  82%{opacity:1}
+  13%{opacity:.7}
+  25%,70%{opacity:0}
+  85%{opacity:.65}
 }
 /* Opening/closing repeats only during an actual speech utterance or explicit motion test. */
 .haro-art-stage.talking .haro-art-closed {
-  animation:haro-voice-ear-cycle 1.04s ease-in-out infinite;
+  animation:haro-voice-ear-cycle 1.60s ease-in-out infinite;
 }
-.haro-art-stage.talking.voice-accent .haro-art-closed {animation-duration:.65s}
+.haro-art-stage.talking.voice-accent .haro-art-closed {animation-duration:1.05s}
 .haro-art-stage .art-hitbox{position:absolute;top:23%;bottom:auto;width:29%;height:62%;aspect-ratio:auto;
  background:transparent;border:0;transform:none;filter:none;z-index:10;opacity:1}
 .haro-art-stage .art-hitbox:hover,.haro-art-stage .art-hitbox.selected{transform:none;filter:none}
@@ -200,7 +200,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
     <button type="button" class="btn orange" onclick="selectHaro('orange')">橙 / LOGOS</button>
     <button type="button" class="btn haro-purple-btn" onclick="selectHaro('purple')">紫 / CHAOS</button>
     <button type="button" class="btn" id="haro-motion-test" onclick="previewHaroMotion()"
-      aria-label="選択中ハロの耳と目の動作を3秒間テスト">耳・目の動作テスト</button>
+      aria-label="選択中ハロの耳と目の動作を約5秒間テスト">耳・目の動作テスト</button>
   </div>
   <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話中のみ開閉）</div>
 </section>
@@ -354,7 +354,7 @@ function setHaroArtSpeaking(id,enabled){
   }
   updateHaroEars();
 }
-/** マイクを使わず耳・目の動作を確認するデモ。3秒後に自動復帰。 */
+/** マイクを使わず耳・目の動作を確認するデモ。約5秒後に自動復帰。 */
 function previewHaroMotion(){
   if(haroSpeech.speaking)return;
   const selected=currentHaro||'orange';
@@ -362,7 +362,7 @@ function previewHaroMotion(){
   setHaroArtSpeaking(selected,true);
   previewMotionTimeout=setTimeout(()=>{
     if(!haroSpeech.speaking)setHaroArtSpeaking(selected,false);
-  },3000);
+  },4800);
 }
 
 class HaroSpeechController {
