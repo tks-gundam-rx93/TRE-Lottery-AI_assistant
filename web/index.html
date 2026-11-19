@@ -539,7 +539,7 @@ function ball(n){const el=document.createElement('span');el.className='lotto-bal
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
 const agentNames={orange:'LOGOS',purple:'CHAOS',green:'NEMESIS'};
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
-function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
+function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro-unit').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
 /** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
 function openLoto7Modal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('loto7-modal').classList.add('open')}
 /** TRE-UI: モーダルを閉じ、メイン画面へ復帰。 */
@@ -990,7 +990,7 @@ class HaroVoiceAssistant {
     if(this.awake)return;
     this.awake=true;
     currentHaro='orange';
-    document.querySelectorAll('.haro').forEach(x=>x.classList.remove('selected'));
+    document.querySelectorAll('.haro-unit').forEach(x=>x.classList.remove('selected'));
     $('pod-orange').classList.add('selected');
     $('active-agent-title').textContent='3-AI COMMS TERMINAL [MAIN: LOGOS]';
     addLog('orange','[ハロ] タカシ、元気か？');
