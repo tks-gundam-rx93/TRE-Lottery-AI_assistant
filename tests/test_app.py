@@ -54,15 +54,16 @@ def test_expired_session_rejected():
 def test_invalid_bounds():
     assert client.post('/api/predict', json={'count': 999}).status_code == 422
 
-def test_haro_approved_artwork_is_served():
-    """承認画像をFastAPIで直接配信し、開閉アセットが存在することを検証。"""
-    for name in ("haro-approved.webp", "haro-open.webp", "haro-closed-stage.webp"):
-        response = client.get("/assets/" + name)
-        assert response.status_code == 200
-        assert response.content[:4] == b"RIFF"
-        assert response.content[8:12] == b"WEBP"
-    html = client.get("/")
-    assert html.status_code == 200
-    assert 'src="/assets/haro-approved.webp"' in html.text
-    assert 'id="pod-purple"' in html.text
-    assert 'id="pod-blue"' not in html.text
+def test_vector_haro_interface_served():
+    """キャラクターの画像ファイルを使わず、3体ともSVGとして配信する。"""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'id="pod-green"' in response.text
+    assert 'id="pod-orange"' in response.text
+    assert 'id="pod-purple"' in response.text
+    assert 'id="pod-blue"' not in response.text
+    assert response.text.count('class="haro-vector"') == 3
+    assert '<img ' not in response.text
+    assert 'class="hatch hatch-left"' in response.text
+    assert 'class="hatch hatch-right"' in response.text
+    assert 'class HaroVectorMotionController' in response.text
