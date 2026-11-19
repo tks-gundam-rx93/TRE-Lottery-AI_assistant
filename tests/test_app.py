@@ -66,10 +66,13 @@ def test_gif_haro_interface_and_assets_served():
     assert "class HaroGifPlaybackController" in page.text
 
     gif = client.get("/assets/haro-speaking.gif")
+    fast = client.get("/assets/haro-speaking-fast.gif")
     idle = client.get("/assets/haro-idle.webp")
-    assert gif.status_code == 200
+    assert gif.status_code == fast.status_code == 200
     assert gif.headers['content-type'].startswith('image/gif')
-    assert gif.content[:6] in (b"GIF89a", b"GIF87a")
+    assert fast.headers['content-type'].startswith('image/gif')
+    assert gif.content[:6] == fast.content[:6] == b"GIF89a"
+    assert len(gif.content) == len(fast.content)
     assert idle.status_code == 200
     assert idle.content[:4] == b"RIFF"
     assert idle.content[8:12] == b"WEBP"
