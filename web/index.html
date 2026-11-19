@@ -48,113 +48,98 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 #boot-launch:focus-visible{outline:3px solid #fff;outline-offset:5px}
 
 
-/* ===== HARO-X3 ベクター描画システム =====
-   本体・耳・ヒンジ・歯車・目・台座を画像にせずSVGで描画。
-   個体ごとに同じ座標系(320x330)と共通CSSを使用する。 */
-:root{--purple:#af6bff}
-.vector-stage{height:auto;border-bottom:0;max-width:1050px;margin:0 auto;background:none;overflow:visible}
-.vector-stage:before,.vector-stage:after{display:none}
-.haro-arena{position:relative;isolation:isolate;height:clamp(295px,49vw,475px);overflow:hidden;
-  border:1px solid #2a617e;border-radius:16px 16px 0 0;
-  background:radial-gradient(ellipse 56% 40% at 50% 54%,#304968 0,#142438 67%,transparent 90%),
-   repeating-linear-gradient(90deg,#0a1426 0px,#172a40 90px,#0c1b2f 94px,#101e35 182px);
-  box-shadow:inset 0 0 46px #0009,0 15px 35px #0008}
-.haro-arena:before{content:"";position:absolute;inset:4px;border:1px solid #4895cb4f;border-radius:12px;pointer-events:none}
-.haro-arena:after{content:"";position:absolute;top:0;left:0;right:0;height:30%;
-  background:linear-gradient(110deg,#00bfff09,transparent 46%,#ffffff11 80%,transparent);pointer-events:none}
-.hangar-ceiling{position:absolute;top:0;left:5%;width:90%;height:28%;opacity:.7;
-  background:repeating-linear-gradient(90deg,transparent 0 20%,#aee8ff1b 21% 23%,transparent 24% 32%),
-             linear-gradient(#2d4658 0 5%,transparent 6% 54%,#6584aa30 55% 61%,transparent 62%);
-  clip-path:polygon(0 0,100% 0,94% 100%,6% 100%)}
-.hangar-monitor{position:absolute;right:5%;top:7%;width:16%;height:28%;border:2px solid #28799d;
-  border-radius:5px;background:#06324d9b;box-shadow:0 0 26px #00e6ff30,inset 0 0 12px #0c8dbb55}
-.hangar-radar{position:absolute;width:46%;aspect-ratio:1;border:3px solid #06c7e060;border-radius:50%;
-  left:12%;top:12%;box-shadow:0 0 9px #20b6ff}
-.hangar-radar:before,.hangar-radar:after{content:"";position:absolute;inset:22%;border:2px solid #0cb7d77d;border-radius:50%}
-.hangar-radar:after{inset:44%;background:#0dc4ef}
-.hangar-lines{position:absolute;left:68%;top:18%;width:24%;height:68%;
-  background:repeating-linear-gradient(0deg,#08dffc9c 0 3px,transparent 4px 11px)}
-.hangar-floor{position:absolute;inset:67% 0 0;
-  background:linear-gradient(0deg,#040a16e8,#26456877 78%,#b6f5ff23 88%,transparent),
-             repeating-linear-gradient(90deg,transparent 0 17%,#5c9cb02b 17.2% 17.5%,transparent 18% 28%)}
-.hangar-floor:after{content:"";position:absolute;inset:60% 0 0;background:#2c5b8a19;transform:perspective(400px) rotateX(28deg)}
-.hangar-label{position:absolute;top:16px;left:20px;font-size:10px;letter-spacing:2px;color:#66d4ff99;z-index:8}
-.hangar-label span{color:#c5d9f9;padding-left:8px}
-.haro-deck{position:absolute;inset:0;z-index:5}
-.haro-unit{position:absolute;display:block;width:44%;aspect-ratio:320/330;max-width:450px;height:auto;
-  bottom:0;cursor:pointer;background:none;border:0;padding:0;
-  overflow:visible;transform:translateX(var(--haro-x,0));filter:drop-shadow(0 16px 14px #000a);
-  transition:filter .25s ease, translate .25s ease}
-.haro-unit:hover,.haro-unit.selected{filter:drop-shadow(0 0 14px #42cdfb7a) drop-shadow(0 16px 12px #000a)}
-.haro-unit:focus-visible{outline:2px solid #e6faff;border-radius:40%}
+
+/* HARO V2: GIFの8フレームを参照した独立SVGアニメーション。
+   状態遷移は IDLE → SPEAKING → IDLE。画像・スプライトは使用しない。 */
+:root{--purple:#9e6dcb}
+.stage.vector-stage{height:auto;max-width:1050px;margin:0 auto;border-bottom:0;background:none;overflow:visible}
+.vector-stage::before,.vector-stage::after{display:none}
+.haro-arena{position:relative;isolation:isolate;height:clamp(292px,46vw,460px);overflow:hidden;
+  background:radial-gradient(ellipse 70% 66% at 50% 70%,#17202a 0%,#070a10 58%,#000 100%);
+  border:1px solid #26394a;border-radius:15px 15px 0 0;
+  box-shadow:inset 0 -16px 35px #000b,0 6px 26px #0007}
+.haro-arena::before{content:"";position:absolute;inset:0;border:1px solid #aee7fd0e;pointer-events:none;z-index:9}
+.hangar-ceiling,.hangar-monitor,.hangar-floor,.hangar-label,.haro-floor-label{display:none}
+.haro-deck{position:absolute;inset:0;isolation:isolate}
+.haro-unit{position:absolute;display:block;aspect-ratio:320 / 330;width:38%;height:auto;bottom:0;
+  padding:0;border:0;background:transparent;cursor:pointer;overflow:visible;
+  --haro-x:0%;transform:translateX(var(--haro-x));
+  filter:drop-shadow(0 8px 13px #000b);transition:filter .18s ease,translate .18s ease}
+.haro-unit:focus-visible{outline:2px solid #e5f6ff;outline-offset:3px;border-radius:35%}
+.haro-unit.selected,.haro-unit:hover{filter:drop-shadow(0 0 10px #9fe4ff8a) drop-shadow(0 9px 14px #000b)}
 .haro-unit .haro-vector{display:block;width:100%;height:auto;overflow:visible}
-#pod-green{left:3%;bottom:4%;z-index:1}
-#pod-purple{right:3%;bottom:4%;z-index:2}
-#pod-orange{left:50%;--haro-x:-50%;bottom:0;z-index:3}
-.haro-tag{display:inline-block;position:absolute;bottom:4%;left:50%;transform:translateX(-50%);
- font:700 10px "Courier New",monospace;letter-spacing:1px;color:#e2f5ff;
- background:#0e2239e0;padding:4px 9px;border:1px solid #51b2d6af;border-radius:4px;
- box-shadow:0 0 12px #041c35}
-.haro-purple .haro-tag{border-color:#ae7cfb}
-.haro-floor-label{position:absolute;left:12px;bottom:11px;z-index:8;pointer-events:none;color:#5cb6d7bd;font-size:10px;letter-spacing:1px}
-.haro-floor-label span{color:#9cddf2;padding-left:8px}
-.haro-art-controls{display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap;
- padding:9px 8px;background:#071526;border:1px solid #23435f}
-.haro-art-controls .btn{font-size:11px;padding:7px 11px}
-.haro-art-controls .haro-purple-btn{border-color:#a567fd;color:#d8b7ff}
-.haro-ear-state{text-align:center;background:#040d1a;font-size:10px;color:#bceeff;padding:6px}
-.msg.purple{border-color:#9e64ff;background:rgba(133,81,220,.13)}
-/* 真の耳ハッチ：閉時の角度0度。開くと左右のヒンジを軸に外側・上方向へ約95度回る。
-   右耳はSVG内で水平反転しているためCSSの同じ回転方向で対称の動きになる。 */
-.haro-unit .hatch{transform-box:view-box;transform-origin:88px 88px}
-.haro-unit .hatch-left{transform-origin:88px 88px}
-.haro-unit .hatch-right{transform-origin:88px 88px}
-@keyframes hatch-swing-left{
-  0%,100%{transform:rotate(0)}
-  16%{transform:rotate(36deg)}
-  33%,67%{transform:rotate(96deg)}
-  82%{transform:rotate(45deg)}
+#pod-green{left:3%;bottom:2%;z-index:1}
+#pod-purple{right:3%;bottom:2%;z-index:2}
+#pod-orange{left:50%;--haro-x:-50%;bottom:-1%;width:44%;z-index:3}
+.haro-tag{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);
+  color:#e5f6ff;background:#090b18dc;border:1px solid #76bcd4a6;padding:4px 8px;
+  border-radius:4px;letter-spacing:1px;font:bold 10px "Courier New",monospace;pointer-events:none}
+.haro-purple .haro-tag{border-color:#a983d6}
+.haro-art-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px;
+  background:#071526;border:1px solid #23435f;padding:8px}
+.haro-art-controls .btn{padding:8px 10px}
+.haro-art-controls .haro-purple-btn{border-color:#af70f2;color:#e5d6ff}
+.haro-ear-state{text-align:center;color:#afddf2;background:#030a14;padding:6px;font-size:10px}
+.msg.purple{border-color:#aa65dd;background:#8822db21}
+/* 左右で同形状の外板を水平方向へ反転している。回転方向も同じで外側上方へ開く。 */
+.haro-unit .hatch{transform-box:view-box;transform-origin:96px 87px;will-change:transform}
+.haro-unit .hatch-left,.haro-unit .hatch-right{transform-origin:96px 87px}
+.haro-unit .eye-pair{opacity:.85;transform-box:fill-box;transform-origin:center}
+.haro-unit.haro-purple .eye{fill:#55172b}
+.haro-unit.haro-green .eye,.haro-unit.haro-orange .eye{fill:#722433}
+/* GIFの静止画8枚を直接使わず、開度キーフレーム（角度）を時間に変換したもの。
+  0:閉 1:30° 2:60° 3:90° 4-5:全開 6:半閉 7:閉 */
+@keyframes haro-ear-hinge-left{
+  0%,100%{transform:rotate(0deg)}
+  12.5%{transform:rotate(29deg)}
+  25%{transform:rotate(60deg)}
+  37.5%{transform:rotate(90deg)}
+  50%,62.5%{transform:rotate(105deg)}
+  75%{transform:rotate(48deg)}
+  87.5%{transform:rotate(17deg)}
 }
-@keyframes hatch-swing-right{
-  0%,100%{transform:rotate(0)}
-  24%{transform:rotate(38deg)}
-  40%,72%{transform:rotate(94deg)}
-  89%{transform:rotate(36deg)}
+@keyframes haro-ear-hinge-right{
+  0%,100%{transform:rotate(0deg)}
+  12.5%{transform:rotate(23deg)}
+  25%{transform:rotate(54deg)}
+  37.5%{transform:rotate(87deg)}
+  50%,62.5%{transform:rotate(103deg)}
+  75%{transform:rotate(52deg)}
+  87.5%{transform:rotate(18deg)}
 }
-@keyframes haro-eye-flash{
-  0%,100%{opacity:.75;filter:drop-shadow(0 0 1px currentColor)}
-  24%,67%{opacity:1;filter:drop-shadow(0 0 9px currentColor)}
-  51%{opacity:.37;filter:drop-shadow(0 0 2px currentColor)}
+@keyframes haro-eye-voice{
+  0%,19%,100%{opacity:.86;filter:drop-shadow(0 0 0 transparent)}
+  32%{opacity:1;filter:drop-shadow(0 0 4px currentColor)}
+  50%,70%{opacity:1;filter:drop-shadow(0 0 11px currentColor) drop-shadow(0 0 5px currentColor)}
+  84%{opacity:.92;filter:drop-shadow(0 0 3px currentColor)}
 }
-@keyframes haro-breath{
-  0%,100%{transform:translateY(0)}
-  40%{transform:translateY(-2px)}
-  72%{transform:translateY(1px)}
+@keyframes haro-voice-head{
+  0%,100%{translate:0 0}
+  43%{translate:0 -2px}
+  75%{translate:0 1px}
 }
-.haro-unit .eye-pair{color:#ffd0ed;transform-box:fill-box;transform-origin:center}
-.haro-purple .eye-pair{color:#ff2749}
-.haro-unit.speaking .hatch-left{animation:hatch-swing-left 1.12s cubic-bezier(.42,0,.58,1) infinite}
-.haro-unit.speaking .hatch-right{animation:hatch-swing-right 1.12s cubic-bezier(.42,0,.58,1) infinite}
-.haro-unit.speaking .eye-pair{animation:haro-eye-flash .42s ease-in-out infinite}
-.haro-unit.speaking .haro-vector{animation:haro-breath 1.3s ease-in-out infinite}
-.haro-unit.speaking.voice-accent .hatch-left{animation-duration:.81s}
-.haro-unit.speaking.voice-accent .hatch-right{animation-duration:.88s}
-.haro-unit.speaking.voice-accent .eye-pair{animation-duration:.23s}
+.haro-unit.speaking .hatch-left{animation:haro-ear-hinge-left 1.44s ease-in-out infinite}
+.haro-unit.speaking .hatch-right{animation:haro-ear-hinge-right 1.44s ease-in-out infinite}
+.haro-unit.speaking .eye-pair{animation:haro-eye-voice 1.44s ease-in-out infinite}
+.haro-unit.haro-green.speaking .eye-pair{color:#ffebff}
+.haro-unit.haro-orange.speaking .eye-pair{color:#ffe5ff}
+.haro-unit.haro-purple.speaking .eye-pair{color:#ff2b47}
+.haro-unit.haro-green.speaking .eye,.haro-unit.haro-orange.speaking .eye{fill:#ffe4ff}
+.haro-unit.haro-purple.speaking .eye{fill:#ff283c}
+.haro-unit.speaking .haro-vector{animation:haro-voice-head 1.44s ease-in-out infinite}
+.haro-unit.speaking.voice-accent .eye-pair{animation-duration:1.04s}
 @media(max-width:560px){
- .haro-arena{height:clamp(230px,73vw,330px);border-radius:7px 7px 0 0}
- .haro-unit{width:50%}
- #pod-green{left:-4%;bottom:3%}
- #pod-purple{right:-4%;bottom:3%}
- #pod-orange{left:50%;bottom:0}
+ .haro-arena{height:clamp(236px,68vw,335px);border-radius:8px 8px 0 0}
+ .haro-unit{width:43%}
+ #pod-green{left:-1%;bottom:1%}
+ #pod-purple{right:-1%;bottom:1%}
+ #pod-orange{left:50%;bottom:-1%;width:50%}
  .haro-tag{font-size:8px;letter-spacing:0;padding:3px 5px}
- .hangar-label{top:8px;left:8px;font-size:8px;letter-spacing:.5px}
- .haro-floor-label{left:6px;bottom:5px;font-size:7px;letter-spacing:0}
- .hangar-monitor{opacity:.45}
  .haro-art-controls .btn{font-size:10px;padding:7px}
 }
 @media(prefers-reduced-motion:reduce){
- .haro-unit.speaking .hatch-left,.haro-unit.speaking .hatch-right{animation-duration:2.6s}
- .haro-unit.speaking .eye-pair{animation-duration:1.3s}
+ .haro-unit.speaking .hatch-left,.haro-unit.speaking .hatch-right{animation-duration:3.2s}
+ .haro-unit.speaking .eye-pair{animation-duration:3.2s}
  .haro-unit.speaking .haro-vector{animation:none}
 }
 </style>
@@ -180,276 +165,453 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
   onclick="selectHaro('green')" aria-label="NEMESIS green ハロを選択" title="NEMESIS">
  <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <defs>
-    <radialGradient id="green-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#c9f393"/><stop offset="28%" stop-color="#68b54d"/>
-      <stop offset="77%" stop-color="#68b54d"/><stop offset="100%" stop-color="#245e30"/>
+    <!-- 画像化しない立体感：装甲・金属台座・ハッチ断面のグラデーション。 -->
+    <radialGradient id="h2-green-shell" cx="39%" cy="26%" r="77%">
+      <stop offset="0" stop-color="#d8efab"/>
+      <stop offset=".30" stop-color="#a2d17b"/>
+      <stop offset=".68" stop-color="#7eaf5c"/>
+      <stop offset="1" stop-color="#345431"/>
     </radialGradient>
-    <linearGradient id="green-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#c9f393"/><stop offset="46%" stop-color="#68b54d"/>
-      <stop offset="100%" stop-color="#245e30"/>
+    <linearGradient id="h2-green-hatch" x1=".07" y1="0" x2=".9" y2="1">
+      <stop offset="0" stop-color="#d8efab"/><stop offset=".48" stop-color="#7eaf5c"/>
+      <stop offset="1" stop-color="#345431"/>
     </linearGradient>
-    <linearGradient id="green-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
+    <linearGradient id="h2-green-underside" x1="0" y1="0" x2="1" y2=".6">
+      <stop stop-color="#6f304b"/><stop offset=".64" stop-color="#4a203c"/><stop offset="1" stop-color="#190d21"/>
     </linearGradient>
-    <radialGradient id="green-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
+    <linearGradient id="h2-green-cavity" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#6b2b59"/><stop offset=".45" stop-color="#4d214b"/><stop offset="1" stop-color="#1e112e"/>
+    </linearGradient>
+    <linearGradient id="h2-green-drive" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#7b6a63"/><stop offset=".43" stop-color="#fae1b0"/><stop offset="1" stop-color="#ad8f6e"/>
+    </linearGradient>
+    <linearGradient id="h2-green-metal" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#4a4968"/><stop offset=".16" stop-color="#e7e7f9"/><stop offset=".38" stop-color="#8d91b3"/>
+      <stop offset=".58" stop-color="#343249"/><stop offset=".82" stop-color="#c6c5e0"/><stop offset="1" stop-color="#3f4057"/>
+    </linearGradient>
+    <linearGradient id="h2-green-underface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#7eaf5c" stop-opacity="0"/><stop offset="1" stop-color="#345431" stop-opacity=".72"/>
+    </linearGradient>
+    <clipPath id="h2-green-bodyclip"><circle cx="160" cy="165" r="110"/></clipPath>
   </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#green-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#green-shell)" stroke="#326b40" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#green-hatch)" stroke="#326b40" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c9f393" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#green-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 金属製支持台座：縁・光沢・固定ラッチを独立したパスで表現。 -->
+  <ellipse cx="160" cy="304" rx="124" ry="20" fill="#000" opacity=".5"/>
+  <path d="M53 249 Q160 268 267 249 L283 295 Q281 311 160 318 Q39 312 37 294Z"
+    fill="url(#h2-green-metal)" stroke="#202235" stroke-width="4"/>
+  <path d="M55 261 Q160 283 264 260" stroke="#fafaff" stroke-width="6" opacity=".61" fill="none"/>
+  <path d="M40 292 Q157 315 280 291" stroke="#272638" stroke-width="5" fill="none"/>
+  <path d="M142 280 L178 280 178 313 142 313Z" fill="#2f3048" stroke="#ced6e8" stroke-width="2.4"/>
+  <path d="M152 286 H168 V298 H152Z" fill="#727e9a" stroke="#191d30" stroke-width="2"/>
+  <rect x="157" y="285" width="6" height="6" rx="1" fill="#202234"/>
+  <!-- 球体：光の反射と下半球のアニメ調の影を別レイヤーへ分割。 -->
+  <circle class="haro-shell" cx="160" cy="165" r="110" fill="url(#h2-green-shell)"
+    stroke="#2c4b2f" stroke-width="3.8"/>
+  <g clip-path="url(#h2-green-bodyclip)">
+    <path class="haro-shadow-area" d="M30 215 Q158 188 290 205 L301 301 17 302 Z"
+      fill="url(#h2-green-underface)"/>
+    <path d="M80 62 Q115 45 152 62" fill="none" stroke="#fff9d7" stroke-width="5.4" opacity=".45"/>
+    <path d="M61 124 Q67 90 101 75" fill="none" stroke="#fff" stroke-width="9" opacity=".16"
+      stroke-linecap="round"/>
+    <path d="M253 103 Q267 131 267 147" fill="none" stroke="#fff" stroke-width="3.2" opacity=".14"/>
+    <path d="M83 247 Q156 267 235 244" fill="none" stroke="#345431" stroke-width="4" opacity=".12"/>
   </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
+  <!-- 左右同じ機構：右耳は左耳と同一形状を水平方向に反転。 -->
+  <g class="ear-module ear-module-left">
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-green-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-green-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-green-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+    <g class="hatch hatch-left"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-green-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-green-hatch)" stroke="#2c4b2f" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#f1ffb9" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#345431" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-green-metal)" stroke="#345431" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
+  </g>
+  <g class="ear-mirror" transform="translate(320 0) scale(-1 1)">
     <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#green-hatch)" stroke="#326b40" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c9f393" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#green-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-green-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-green-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-green-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+      <g class="hatch hatch-right"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-green-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-green-hatch)" stroke="#2c4b2f" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#f1ffb9" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#345431" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-green-metal)" stroke="#345431" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
     </g>
   </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
+  <!-- 目：通常は暗い。発話中は色・発光・大きさが連動する。 -->
   <g class="eye-pair">
-   <ellipse class="eye" cx="136" cy="163" rx="6.4" ry="10" fill="#f5baff"/>
-   <ellipse class="eye" cx="184" cy="163" rx="6.4" ry="10" fill="#f5baff"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#245e30" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#c9f393" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#466e31" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#466e31" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#326b40" stroke-width="4" opacity=".7"/>
- </svg>
+       <ellipse class="eye" cx="139" cy="162" rx="4.1" ry="7.6" fill="#6b2233"/>
+       <ellipse class="eye" cx="181" cy="162" rx="4.1" ry="7.6" fill="#6b2233"/>
+     </g>
+  <!-- 顔の分割線：浅いS字の曲線と頬側の継ぎ目。 -->
+  <path class="face-seam" d="M54 196 Q94 226 136 204 Q178 181 214 200 Q243 217 268 199"
+    fill="none" stroke="#2c4b2f" stroke-width="2.7" opacity=".88"/>
+  <path d="M61 202 Q92 227 126 210" stroke="#fff" fill="none" opacity=".27" stroke-width="1.6"/>
+  <path d="M52 151 Q56 135 65 121 M268 150 Q264 136 255 122" fill="none"
+    stroke="#345431" stroke-width="2" opacity=".22"/>
+  <!-- 台座の固定リングを手前へ重ねて外装の接地面を表現。 -->
+  <path d="M66 251 Q159 277 254 251" stroke="#345431" stroke-width="4.8" opacity=".68" fill="none"/>
+</svg>
  <span class="haro-tag">NEMESIS</span>
 </button>
    <button type="button" class="haro-unit haro-purple" id="pod-purple"
   onclick="selectHaro('purple')" aria-label="CHAOS purple ハロを選択" title="CHAOS">
  <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <defs>
-    <radialGradient id="purple-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#c3a1f7"/><stop offset="28%" stop-color="#6e4b9f"/>
-      <stop offset="77%" stop-color="#6e4b9f"/><stop offset="100%" stop-color="#241c4d"/>
+    <!-- 画像化しない立体感：装甲・金属台座・ハッチ断面のグラデーション。 -->
+    <radialGradient id="h2-purple-shell" cx="39%" cy="26%" r="77%">
+      <stop offset="0" stop-color="#b89ad9"/>
+      <stop offset=".30" stop-color="#775a9b"/>
+      <stop offset=".68" stop-color="#594078"/>
+      <stop offset="1" stop-color="#221a38"/>
     </radialGradient>
-    <linearGradient id="purple-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#c3a1f7"/><stop offset="46%" stop-color="#6e4b9f"/>
-      <stop offset="100%" stop-color="#241c4d"/>
+    <linearGradient id="h2-purple-hatch" x1=".07" y1="0" x2=".9" y2="1">
+      <stop offset="0" stop-color="#b89ad9"/><stop offset=".48" stop-color="#594078"/>
+      <stop offset="1" stop-color="#221a38"/>
     </linearGradient>
-    <linearGradient id="purple-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
+    <linearGradient id="h2-purple-underside" x1="0" y1="0" x2="1" y2=".6">
+      <stop stop-color="#6f304b"/><stop offset=".64" stop-color="#4a203c"/><stop offset="1" stop-color="#190d21"/>
     </linearGradient>
-    <radialGradient id="purple-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
+    <linearGradient id="h2-purple-cavity" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#6b2b59"/><stop offset=".45" stop-color="#4d214b"/><stop offset="1" stop-color="#1e112e"/>
+    </linearGradient>
+    <linearGradient id="h2-purple-drive" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#7b6a63"/><stop offset=".43" stop-color="#fae1b0"/><stop offset="1" stop-color="#ad8f6e"/>
+    </linearGradient>
+    <linearGradient id="h2-purple-metal" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#4a4968"/><stop offset=".16" stop-color="#e7e7f9"/><stop offset=".38" stop-color="#8d91b3"/>
+      <stop offset=".58" stop-color="#343249"/><stop offset=".82" stop-color="#c6c5e0"/><stop offset="1" stop-color="#3f4057"/>
+    </linearGradient>
+    <linearGradient id="h2-purple-underface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#594078" stop-opacity="0"/><stop offset="1" stop-color="#221a38" stop-opacity=".72"/>
+    </linearGradient>
+    <clipPath id="h2-purple-bodyclip"><circle cx="160" cy="165" r="110"/></clipPath>
   </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#purple-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#purple-shell)" stroke="#433063" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#purple-hatch)" stroke="#433063" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c3a1f7" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#purple-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 金属製支持台座：縁・光沢・固定ラッチを独立したパスで表現。 -->
+  <ellipse cx="160" cy="304" rx="124" ry="20" fill="#000" opacity=".5"/>
+  <path d="M53 249 Q160 268 267 249 L283 295 Q281 311 160 318 Q39 312 37 294Z"
+    fill="url(#h2-purple-metal)" stroke="#202235" stroke-width="4"/>
+  <path d="M55 261 Q160 283 264 260" stroke="#fafaff" stroke-width="6" opacity=".61" fill="none"/>
+  <path d="M40 292 Q157 315 280 291" stroke="#272638" stroke-width="5" fill="none"/>
+  <path d="M142 280 L178 280 178 313 142 313Z" fill="#2f3048" stroke="#ced6e8" stroke-width="2.4"/>
+  <path d="M152 286 H168 V298 H152Z" fill="#727e9a" stroke="#191d30" stroke-width="2"/>
+  <rect x="157" y="285" width="6" height="6" rx="1" fill="#202234"/>
+  <!-- 球体：光の反射と下半球のアニメ調の影を別レイヤーへ分割。 -->
+  <circle class="haro-shell" cx="160" cy="165" r="110" fill="url(#h2-purple-shell)"
+    stroke="#302443" stroke-width="3.8"/>
+  <g clip-path="url(#h2-purple-bodyclip)">
+    <path class="haro-shadow-area" d="M30 215 Q158 188 290 205 L301 301 17 302 Z"
+      fill="url(#h2-purple-underface)"/>
+    <path d="M80 62 Q115 45 152 62" fill="none" stroke="#fff9d7" stroke-width="5.4" opacity=".45"/>
+    <path d="M61 124 Q67 90 101 75" fill="none" stroke="#fff" stroke-width="9" opacity=".16"
+      stroke-linecap="round"/>
+    <path d="M253 103 Q267 131 267 147" fill="none" stroke="#fff" stroke-width="3.2" opacity=".14"/>
+    <path d="M83 247 Q156 267 235 244" fill="none" stroke="#221a38" stroke-width="4" opacity=".12"/>
   </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
+  <!-- 左右同じ機構：右耳は左耳と同一形状を水平方向に反転。 -->
+  <g class="ear-module ear-module-left">
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-purple-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-purple-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-purple-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+    <g class="hatch hatch-left"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-purple-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-purple-hatch)" stroke="#302443" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#b99be3" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#221a38" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-purple-metal)" stroke="#221a38" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
+  </g>
+  <g class="ear-mirror" transform="translate(320 0) scale(-1 1)">
     <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#purple-hatch)" stroke="#433063" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c3a1f7" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#purple-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-purple-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-purple-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-purple-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+      <g class="hatch hatch-right"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-purple-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-purple-hatch)" stroke="#302443" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#b99be3" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#221a38" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-purple-metal)" stroke="#221a38" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
     </g>
   </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
+  <!-- 目：通常は暗い。発話中は色・発光・大きさが連動する。 -->
   <g class="eye-pair">
-   <path class="eye" d="M114 159 L148 168 Q142 177 130 176 L115 170 Z" fill="#ff203f"/>
-   <path class="eye" d="M206 159 L172 168 Q178 177 190 176 L205 170 Z" fill="#ff203f"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#241c4d" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#c3a1f7" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#3c286a" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#3c286a" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#433063" stroke-width="4" opacity=".7"/>
- </svg>
+       <path class="eye" d="M123 160 Q136 168 151 174 Q140 182 130 174 Q122 168 123 160Z" fill="#51122b"/>
+       <path class="eye" d="M197 160 Q184 168 169 174 Q180 182 190 174 Q198 168 197 160Z" fill="#51122b"/>
+     </g>
+  <!-- 顔の分割線：浅いS字の曲線と頬側の継ぎ目。 -->
+  <path class="face-seam" d="M54 196 Q94 226 136 204 Q178 181 214 200 Q243 217 268 199"
+    fill="none" stroke="#302443" stroke-width="2.7" opacity=".88"/>
+  <path d="M61 202 Q92 227 126 210" stroke="#fff" fill="none" opacity=".27" stroke-width="1.6"/>
+  <path d="M52 151 Q56 135 65 121 M268 150 Q264 136 255 122" fill="none"
+    stroke="#221a38" stroke-width="2" opacity=".22"/>
+  <!-- 台座の固定リングを手前へ重ねて外装の接地面を表現。 -->
+  <path d="M66 251 Q159 277 254 251" stroke="#221a38" stroke-width="4.8" opacity=".68" fill="none"/>
+</svg>
  <span class="haro-tag">CHAOS</span>
 </button>
    <button type="button" class="haro-unit haro-orange selected" id="pod-orange"
   onclick="selectHaro('orange')" aria-label="LOGOS orange ハロを選択" title="LOGOS">
  <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <defs>
-    <radialGradient id="orange-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#ffe295"/><stop offset="28%" stop-color="#ff9521"/>
-      <stop offset="77%" stop-color="#ff9521"/><stop offset="100%" stop-color="#9c4216"/>
+    <!-- 画像化しない立体感：装甲・金属台座・ハッチ断面のグラデーション。 -->
+    <radialGradient id="h2-orange-shell" cx="39%" cy="26%" r="77%">
+      <stop offset="0" stop-color="#ffe3a6"/>
+      <stop offset=".30" stop-color="#ffb85c"/>
+      <stop offset=".68" stop-color="#f69d3c"/>
+      <stop offset="1" stop-color="#9c4b22"/>
     </radialGradient>
-    <linearGradient id="orange-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#ffe295"/><stop offset="46%" stop-color="#ff9521"/>
-      <stop offset="100%" stop-color="#9c4216"/>
+    <linearGradient id="h2-orange-hatch" x1=".07" y1="0" x2=".9" y2="1">
+      <stop offset="0" stop-color="#ffe3a6"/><stop offset=".48" stop-color="#f69d3c"/>
+      <stop offset="1" stop-color="#9c4b22"/>
     </linearGradient>
-    <linearGradient id="orange-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
+    <linearGradient id="h2-orange-underside" x1="0" y1="0" x2="1" y2=".6">
+      <stop stop-color="#6f304b"/><stop offset=".64" stop-color="#4a203c"/><stop offset="1" stop-color="#190d21"/>
     </linearGradient>
-    <radialGradient id="orange-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
+    <linearGradient id="h2-orange-cavity" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#6b2b59"/><stop offset=".45" stop-color="#4d214b"/><stop offset="1" stop-color="#1e112e"/>
+    </linearGradient>
+    <linearGradient id="h2-orange-drive" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#7b6a63"/><stop offset=".43" stop-color="#fae1b0"/><stop offset="1" stop-color="#ad8f6e"/>
+    </linearGradient>
+    <linearGradient id="h2-orange-metal" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#4a4968"/><stop offset=".16" stop-color="#e7e7f9"/><stop offset=".38" stop-color="#8d91b3"/>
+      <stop offset=".58" stop-color="#343249"/><stop offset=".82" stop-color="#c6c5e0"/><stop offset="1" stop-color="#3f4057"/>
+    </linearGradient>
+    <linearGradient id="h2-orange-underface" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f69d3c" stop-opacity="0"/><stop offset="1" stop-color="#9c4b22" stop-opacity=".72"/>
+    </linearGradient>
+    <clipPath id="h2-orange-bodyclip"><circle cx="160" cy="165" r="110"/></clipPath>
   </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#orange-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#orange-shell)" stroke="#a65b26" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#orange-hatch)" stroke="#a65b26" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#ffe295" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#orange-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 金属製支持台座：縁・光沢・固定ラッチを独立したパスで表現。 -->
+  <ellipse cx="160" cy="304" rx="124" ry="20" fill="#000" opacity=".5"/>
+  <path d="M53 249 Q160 268 267 249 L283 295 Q281 311 160 318 Q39 312 37 294Z"
+    fill="url(#h2-orange-metal)" stroke="#202235" stroke-width="4"/>
+  <path d="M55 261 Q160 283 264 260" stroke="#fafaff" stroke-width="6" opacity=".61" fill="none"/>
+  <path d="M40 292 Q157 315 280 291" stroke="#272638" stroke-width="5" fill="none"/>
+  <path d="M142 280 L178 280 178 313 142 313Z" fill="#2f3048" stroke="#ced6e8" stroke-width="2.4"/>
+  <path d="M152 286 H168 V298 H152Z" fill="#727e9a" stroke="#191d30" stroke-width="2"/>
+  <rect x="157" y="285" width="6" height="6" rx="1" fill="#202234"/>
+  <!-- 球体：光の反射と下半球のアニメ調の影を別レイヤーへ分割。 -->
+  <circle class="haro-shell" cx="160" cy="165" r="110" fill="url(#h2-orange-shell)"
+    stroke="#7b4124" stroke-width="3.8"/>
+  <g clip-path="url(#h2-orange-bodyclip)">
+    <path class="haro-shadow-area" d="M30 215 Q158 188 290 205 L301 301 17 302 Z"
+      fill="url(#h2-orange-underface)"/>
+    <path d="M80 62 Q115 45 152 62" fill="none" stroke="#fff9d7" stroke-width="5.4" opacity=".45"/>
+    <path d="M61 124 Q67 90 101 75" fill="none" stroke="#fff" stroke-width="9" opacity=".16"
+      stroke-linecap="round"/>
+    <path d="M253 103 Q267 131 267 147" fill="none" stroke="#fff" stroke-width="3.2" opacity=".14"/>
+    <path d="M83 247 Q156 267 235 244" fill="none" stroke="#9c4b22" stroke-width="4" opacity=".12"/>
   </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
+  <!-- 左右同じ機構：右耳は左耳と同一形状を水平方向に反転。 -->
+  <g class="ear-module ear-module-left">
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-orange-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-orange-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-orange-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+    <g class="hatch hatch-left"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-orange-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-orange-hatch)" stroke="#7b4124" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#fff0b7" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#9c4b22" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-orange-metal)" stroke="#9c4b22" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
+  </g>
+  <g class="ear-mirror" transform="translate(320 0) scale(-1 1)">
     <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#orange-hatch)" stroke="#a65b26" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#ffe295" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#orange-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
+  <!-- 内部機械室：マルーン色のくぼみ。耳を開いたときのみ外板の下から見える。 -->
+  <g class="ear-cavity">
+    <path d="M97 86 C70 62 41 80 27 109 C12 142 28 179 56 184 C86 173 106 127 97 86Z"
+      fill="#281123" stroke="#3d1838" stroke-width="5.2"/>
+    <path d="M91 91 C66 77 46 91 37 113 Q26 150 56 172 C77 159 99 129 91 91Z"
+      fill="url(#h2-orange-cavity)" stroke="#a15c84" stroke-width="2.7"/>
+    <path d="M88 89 C70 76 51 89 46 110 Q39 133 49 158"
+      fill="none" stroke="#c981aa" stroke-width="3" opacity=".65"/>
+    <!-- コイル状の管とメタルリング。静止画像にはしない。 -->
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="#513a45" stroke-width="21" stroke-linecap="round"/>
+    <path d="M72 108 Q48 123 54 157" fill="none" stroke="url(#h2-orange-drive)" stroke-width="14" stroke-linecap="round"/>
+    <g class="ear-drive-coil" stroke="#65434a" stroke-width="2.2" fill="#f3ddad">
+      <ellipse cx="69" cy="109" rx="11.2" ry="6.7" transform="rotate(30 69 109)"/>
+      <ellipse cx="63" cy="117" rx="11.6" ry="6.5" transform="rotate(23 63 117)"/>
+      <ellipse cx="58" cy="126" rx="12.1" ry="6.5" transform="rotate(13 58 126)"/>
+      <ellipse cx="56" cy="136" rx="11.8" ry="6.1" transform="rotate(6 56 136)"/>
+      <ellipse cx="56" cy="146" rx="10.8" ry="5.8" transform="rotate(-10 56 146)"/>
+      <ellipse cx="60" cy="154" rx="10" ry="5.4" transform="rotate(-25 60 154)"/>
+    </g>
+    <path d="M82 100 Q83 136 67 162" fill="none" stroke="#ffe8bd" stroke-width="2.5" opacity=".7"/>
+    <!-- 回転軸：外装ハッチと本体の連結点。 -->
+    <path d="M90 86 l10 -12 10 10 -8 14" fill="#ad6f55" stroke="#3f2c35" stroke-width="2.2"/>
+    <circle cx="97" cy="87" r="8" fill="url(#h2-orange-metal)" stroke="#644359" stroke-width="2.4"/>
+    <circle cx="97" cy="87" r="3" fill="#fbecc5"/>
+  </g>
+      <g class="hatch hatch-right"><g class="hatch-leaf">
+      <!-- 閉時には球体の曲面へ沿う葉状の外板。ヒンジ(96,88)で回転する。 -->
+      <path class="hatch-under" d="M97 87 C73 68 38 74 20 110 C4 145 26 182 55 184 C81 164 100 120 97 87Z"
+        fill="url(#h2-orange-underside)" stroke="#5c2b47" stroke-width="3.5"/>
+      <path class="hatch-face" d="M96 86 C72 61 39 70 19 109 C3 144 25 176 55 181 C80 161 108 124 96 86Z"
+        fill="url(#h2-orange-hatch)" stroke="#7b4124" stroke-width="3.6"/>
+      <path d="M92 91 C70 72 44 83 30 110 Q13 147 48 169" fill="none"
+        stroke="#fff0b7" stroke-opacity=".86" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M85 120 Q78 153 55 175" stroke="#9c4b22" stroke-width="2" opacity=".62" fill="none"/>
+      <circle cx="96" cy="87" r="7.5" fill="url(#h2-orange-metal)" stroke="#9c4b22" stroke-width="2.3"/>
+      <circle cx="96" cy="87" r="2.5" fill="#fff2ce"/>
+    </g></g>
     </g>
   </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
+  <!-- 目：通常は暗い。発話中は色・発光・大きさが連動する。 -->
   <g class="eye-pair">
-   <ellipse class="eye" cx="136" cy="163" rx="6.4" ry="10" fill="#ffe2ff"/>
-   <ellipse class="eye" cx="184" cy="163" rx="6.4" ry="10" fill="#ffe2ff"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#9c4216" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#ffe295" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#c96f22" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#c96f22" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#a65b26" stroke-width="4" opacity=".7"/>
- </svg>
+       <ellipse class="eye" cx="139" cy="162" rx="4.1" ry="7.6" fill="#6b2233"/>
+       <ellipse class="eye" cx="181" cy="162" rx="4.1" ry="7.6" fill="#6b2233"/>
+     </g>
+  <!-- 顔の分割線：浅いS字の曲線と頬側の継ぎ目。 -->
+  <path class="face-seam" d="M54 196 Q94 226 136 204 Q178 181 214 200 Q243 217 268 199"
+    fill="none" stroke="#7b4124" stroke-width="2.7" opacity=".88"/>
+  <path d="M61 202 Q92 227 126 210" stroke="#fff" fill="none" opacity=".27" stroke-width="1.6"/>
+  <path d="M52 151 Q56 135 65 121 M268 150 Q264 136 255 122" fill="none"
+    stroke="#9c4b22" stroke-width="2" opacity=".22"/>
+  <!-- 台座の固定リングを手前へ重ねて外装の接地面を表現。 -->
+  <path d="M66 251 Q159 277 254 251" stroke="#9c4b22" stroke-width="4.8" opacity=".68" fill="none"/>
+</svg>
  <span class="haro-tag">LOGOS</span>
 </button>
   </div>
