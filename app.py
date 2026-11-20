@@ -31,6 +31,7 @@ from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 from lottery_ai.cloud_import import Loto7HistoryImporter
 from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
+from lottery_ai.additional_games import AdditionalGameArchive, AdditionalGameRepository
 
 
 class PredictRequest(BaseModel):
@@ -198,6 +199,38 @@ def import_verified_loto7_history_on_startup() -> None:
 
 
 
+@app.on_event("startup")
+def import_additional_game_history_on_startup() -> None:
+    """LOTO6とNUMBERS4の検証済み履歴を、明示的な起動フラグがある場合だけDBへ投入。
+
+    別テーブルを利用するためLOTO7履歴や予測結果に一切変更を加えない。
+    例外メッセージは認証情報が含まれる可能性があるため公開しない。
+    """
+    if os.getenv("LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES", "").strip() != "1":
+        return
+    if service.mysql is None:
+        logging.getLogger("tre_lottery.additional_import").warning(
+            "additional games import skipped: MySQL disabled"
+        )
+        return
+    reader = AdditionalGameArchive()
+    repository = AdditionalGameRepository(service.mysql)
+    for game in ("LOTO6", "NUMBERS4"):
+        try:
+            draws = reader.load(game)
+            result = repository.import_draws(game, draws)
+            logging.getLogger("tre_lottery.additional_import").info(
+                "additional game import OK: game=%s rows=%d inserted=%d skipped=%d total=%d",
+                game, result["rows_in_file"], result["inserted"],
+                result["skipped"], result["db_rows"],
+            )
+        except Exception as exc:
+            logging.getLogger("tre_lottery.additional_import").error(
+                "additional game import failed: game=%s error_type=%s",
+                game, type(exc).__name__,
+            )
+
+
 @app.get('/')
 def home():
     return FileResponse(Path(__file__).parent / 'web' / 'index.html', media_type='text/html')
@@ -275,6 +308,33 @@ def history_status():
     return {'mode': 'MYSQL', 'persistent': True, 'draw_count': stats['count'],
             'first_draw': stats.get('first_draw'), 'last_draw': stats.get('last_draw'),
             'last_date': stats.get('last_date'), 'missing_count': stats.get('missing_count', 0)}
+
+
+@app.get('/api/history/status/{game}')
+def additional_history_status(game: str):
+    """宝くじ種類ごとのDB履歴件数。LOTO7の既存APIは互換性維持。"""
+    game = game.upper()
+    if game == "LOTO7":
+        return history_status()
+    if game not in ("LOTO6", "NUMBERS4"):
+        raise HTTPException(status_code=404, detail="未対応の宝くじ種類です")
+    if service.mysql is None:
+        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0}
+    try:
+        stats = AdditionalGameRepository(service.mysql).stats(game)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="クラウドMySQLへの接続・照会に失敗しました") from exc
+    return {
+        'game': game,
+        'mode': 'MYSQL',
+        'persistent': True,
+        'draw_count': stats['count'],
+        'first_draw': stats['first_draw'],
+        'last_draw': stats['last_draw'],
+        'missing_count': stats['missing_count'],
+        'dates_available': stats['dates_available'],
+        'prediction_available': False,
+    }
 
 
 def _require_import_admin(request: Request) -> None:
