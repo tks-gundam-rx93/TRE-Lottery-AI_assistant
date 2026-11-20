@@ -1,0 +1,18 @@
+services:
+  - name: tre-lottery-pr10-preview
+    type: web
+    runtime: python
+    plan: free
+    region: singapore
+    branch: codex/lottery-voice-debug
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    autoDeployTrigger: commit
+    envVars:
+      - key: LOTTERY_DB_BACKEND
+        value: mysql
+      - key: LOTTERY_MYSQL_URL
+        fromService:
+          type: web
+          name: tre-lottery-ai-assistant
+          envVarKey: LOTTERY_MYSQL_URL
