@@ -215,6 +215,60 @@ class MySqlDrawRepository:
         finally:
             conn.close()
 
+    def upsert_many(self, draws: list[Draw], source: str = "CSV_BULK") -> int:
+        """ロト7履歴をまとめて比較・追加する高速の冪等一括取込。
+
+        703回分の遠隔DBへの往復通信を最小限にするため、先にDB全件を
+        1回のSELECTで読み取り、未登録分だけexecutemanyでINSERTする。
+        既存データと相違が1件でもあればINSERTせず例外・ロールバック。
+        INSERTの重複が並行トランザクションで起きた場合も全件ロールバック。
+        """
+        if not draws:
+            return 0
+        if len({d.draw_no for d in draws}) != len(draws):
+            raise ValueError("取込対象CSVの回号が重複しています")
+        self.ensure_schema()
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT draw_no, draw_date, numbers_json, bonus_json "
+                    "FROM draw_results WHERE lottery_type=%s FOR UPDATE", ("LOTO7",)
+                )
+                old = {
+                    int(no): (str(d), str(nums), str(bonus))
+                    for no, d, nums, bonus in cursor.fetchall()
+                }
+                to_insert = []
+                for item in draws:
+                    values = (
+                        str(item.draw_date),
+                        json.dumps(item.numbers),
+                        json.dumps(item.bonus),
+                    )
+                    previous = old.get(item.draw_no)
+                    if previous is not None:
+                        if previous != values:
+                            raise ValueError(f"DBとCSVの第{item.draw_no}回が一致しません")
+                        continue
+                    to_insert.append((
+                        "LOTO7", item.draw_no, *values, source,
+                    ))
+                if to_insert:
+                    cursor.executemany(
+                        "INSERT INTO draw_results "
+                        "(lottery_type, draw_no, draw_date, numbers_json, bonus_json, source) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        to_insert,
+                    )
+            conn.commit()
+            return len(to_insert)
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def save_prediction(self, result: dict[str, Any]) -> str:
         """番号候補・学習スコア・3AI判定をJSON形式で保存する。"""
         self.ensure_schema()
