@@ -19,6 +19,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from lottery_ai.agents import OpenAICompatibleClient, ThreeAgentDebate
@@ -154,6 +155,10 @@ class PredictionService:
 
 service = PredictionService()
 app = FastAPI(title='TRE-Lottery AI Assistant', version='0.1.0')
+
+# 方式1の固定画像と8フレームGIFはFastAPIで静的配信する。
+# この分岐ではMySQL・予測処理・音声認識エンドポイントを変更しない。
+app.mount('/assets', StaticFiles(directory=Path(__file__).parent / 'web' / 'assets'), name='haro-assets')
 
 
 @app.get('/')

@@ -48,114 +48,43 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 #boot-launch:focus-visible{outline:3px solid #fff;outline-offset:5px}
 
 
-/* ===== HARO-X3 ベクター描画システム =====
-   本体・耳・ヒンジ・歯車・目・台座を画像にせずSVGで描画。
-   個体ごとに同じ座標系(320x330)と共通CSSを使用する。 */
-:root{--purple:#af6bff}
-.vector-stage{height:auto;border-bottom:0;max-width:1050px;margin:0 auto;background:none;overflow:visible}
-.vector-stage:before,.vector-stage:after{display:none}
-.haro-arena{position:relative;isolation:isolate;height:clamp(295px,49vw,475px);overflow:hidden;
-  border:1px solid #2a617e;border-radius:16px 16px 0 0;
-  background:radial-gradient(ellipse 56% 40% at 50% 54%,#304968 0,#142438 67%,transparent 90%),
-   repeating-linear-gradient(90deg,#0a1426 0px,#172a40 90px,#0c1b2f 94px,#101e35 182px);
-  box-shadow:inset 0 0 46px #0009,0 15px 35px #0008}
-.haro-arena:before{content:"";position:absolute;inset:4px;border:1px solid #4895cb4f;border-radius:12px;pointer-events:none}
-.haro-arena:after{content:"";position:absolute;top:0;left:0;right:0;height:30%;
-  background:linear-gradient(110deg,#00bfff09,transparent 46%,#ffffff11 80%,transparent);pointer-events:none}
-.hangar-ceiling{position:absolute;top:0;left:5%;width:90%;height:28%;opacity:.7;
-  background:repeating-linear-gradient(90deg,transparent 0 20%,#aee8ff1b 21% 23%,transparent 24% 32%),
-             linear-gradient(#2d4658 0 5%,transparent 6% 54%,#6584aa30 55% 61%,transparent 62%);
-  clip-path:polygon(0 0,100% 0,94% 100%,6% 100%)}
-.hangar-monitor{position:absolute;right:5%;top:7%;width:16%;height:28%;border:2px solid #28799d;
-  border-radius:5px;background:#06324d9b;box-shadow:0 0 26px #00e6ff30,inset 0 0 12px #0c8dbb55}
-.hangar-radar{position:absolute;width:46%;aspect-ratio:1;border:3px solid #06c7e060;border-radius:50%;
-  left:12%;top:12%;box-shadow:0 0 9px #20b6ff}
-.hangar-radar:before,.hangar-radar:after{content:"";position:absolute;inset:22%;border:2px solid #0cb7d77d;border-radius:50%}
-.hangar-radar:after{inset:44%;background:#0dc4ef}
-.hangar-lines{position:absolute;left:68%;top:18%;width:24%;height:68%;
-  background:repeating-linear-gradient(0deg,#08dffc9c 0 3px,transparent 4px 11px)}
-.hangar-floor{position:absolute;inset:67% 0 0;
-  background:linear-gradient(0deg,#040a16e8,#26456877 78%,#b6f5ff23 88%,transparent),
-             repeating-linear-gradient(90deg,transparent 0 17%,#5c9cb02b 17.2% 17.5%,transparent 18% 28%)}
-.hangar-floor:after{content:"";position:absolute;inset:60% 0 0;background:#2c5b8a19;transform:perspective(400px) rotateX(28deg)}
-.hangar-label{position:absolute;top:16px;left:20px;font-size:10px;letter-spacing:2px;color:#66d4ff99;z-index:8}
-.hangar-label span{color:#c5d9f9;padding-left:8px}
-.haro-deck{position:absolute;inset:0;z-index:5}
-.haro-unit{position:absolute;display:block;width:44%;aspect-ratio:320/330;max-width:450px;height:auto;
-  bottom:0;cursor:pointer;background:none;border:0;padding:0;
-  overflow:visible;transform:translateX(var(--haro-x,0));filter:drop-shadow(0 16px 14px #000a);
-  transition:filter .25s ease, translate .25s ease}
-.haro-unit:hover,.haro-unit.selected{filter:drop-shadow(0 0 14px #42cdfb7a) drop-shadow(0 16px 12px #000a)}
-.haro-unit:focus-visible{outline:2px solid #e6faff;border-radius:40%}
-.haro-unit .haro-vector{display:block;width:100%;height:auto;overflow:visible}
-#pod-green{left:3%;bottom:4%;z-index:1}
-#pod-purple{right:3%;bottom:4%;z-index:2}
-#pod-orange{left:50%;--haro-x:-50%;bottom:0;z-index:3}
-.haro-tag{display:inline-block;position:absolute;bottom:4%;left:50%;transform:translateX(-50%);
- font:700 10px "Courier New",monospace;letter-spacing:1px;color:#e2f5ff;
- background:#0e2239e0;padding:4px 9px;border:1px solid #51b2d6af;border-radius:4px;
- box-shadow:0 0 12px #041c35}
-.haro-purple .haro-tag{border-color:#ae7cfb}
-.haro-floor-label{position:absolute;left:12px;bottom:11px;z-index:8;pointer-events:none;color:#5cb6d7bd;font-size:10px;letter-spacing:1px}
-.haro-floor-label span{color:#9cddf2;padding-left:8px}
-.haro-art-controls{display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap;
- padding:9px 8px;background:#071526;border:1px solid #23435f}
-.haro-art-controls .btn{font-size:11px;padding:7px 11px}
-.haro-art-controls .haro-purple-btn{border-color:#a567fd;color:#d8b7ff}
-.haro-ear-state{text-align:center;background:#040d1a;font-size:10px;color:#bceeff;padding:6px}
-.msg.purple{border-color:#9e64ff;background:rgba(133,81,220,.13)}
-/* 真の耳ハッチ：閉時の角度0度。開くと左右のヒンジを軸に外側・上方向へ約95度回る。
-   右耳はSVG内で水平反転しているためCSSの同じ回転方向で対称の動きになる。 */
-.haro-unit .hatch{transform-box:view-box;transform-origin:88px 88px}
-.haro-unit .hatch-left{transform-origin:88px 88px}
-.haro-unit .hatch-right{transform-origin:88px 88px}
-@keyframes hatch-swing-left{
-  0%,100%{transform:rotate(0)}
-  16%{transform:rotate(36deg)}
-  33%,67%{transform:rotate(96deg)}
-  82%{transform:rotate(45deg)}
-}
-@keyframes hatch-swing-right{
-  0%,100%{transform:rotate(0)}
-  24%{transform:rotate(38deg)}
-  40%,72%{transform:rotate(94deg)}
-  89%{transform:rotate(36deg)}
-}
-@keyframes haro-eye-flash{
-  0%,100%{opacity:.75;filter:drop-shadow(0 0 1px currentColor)}
-  24%,67%{opacity:1;filter:drop-shadow(0 0 9px currentColor)}
-  51%{opacity:.37;filter:drop-shadow(0 0 2px currentColor)}
-}
-@keyframes haro-breath{
-  0%,100%{transform:translateY(0)}
-  40%{transform:translateY(-2px)}
-  72%{transform:translateY(1px)}
-}
-.haro-unit .eye-pair{color:#ffd0ed;transform-box:fill-box;transform-origin:center}
-.haro-purple .eye-pair{color:#ff2749}
-.haro-unit.speaking .hatch-left{animation:hatch-swing-left 1.12s cubic-bezier(.42,0,.58,1) infinite}
-.haro-unit.speaking .hatch-right{animation:hatch-swing-right 1.12s cubic-bezier(.42,0,.58,1) infinite}
-.haro-unit.speaking .eye-pair{animation:haro-eye-flash .42s ease-in-out infinite}
-.haro-unit.speaking .haro-vector{animation:haro-breath 1.3s ease-in-out infinite}
-.haro-unit.speaking.voice-accent .hatch-left{animation-duration:.81s}
-.haro-unit.speaking.voice-accent .hatch-right{animation-duration:.88s}
-.haro-unit.speaking.voice-accent .eye-pair{animation-duration:.23s}
+/* HARO METHOD 1: 8フレームのGIFを音声応答中だけ再生。
+   通常時は1枚目の閉耳の静止画を表示し、音声停止時は再び静止画に戻す。 */
+:root{--purple:#a479d9}
+.stage.gif-stage{height:auto;max-width:760px;margin:0 auto;background:#000;border-bottom:0;overflow:visible}
+.gif-stage::before,.gif-stage::after{display:none}
+.haro-scene{position:relative;width:100%;aspect-ratio:507/378;background:#000;overflow:hidden;isolation:isolate}
+.haro-scene-frame{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;user-select:none;pointer-events:none}
+.haro-scene-frame.haro-animation[hidden]{display:none!important}
+.haro-scene-frame.haro-animation{z-index:2}
+.haro-scene.talking.loaded #haro-idle{visibility:hidden}
+.haro-unit{position:absolute;top:20%;height:65%;border:0;border-radius:25%;background:transparent;
+ padding:0;cursor:pointer;z-index:5;outline-offset:-6px;transition:box-shadow .15s}
+.haro-unit:hover{box-shadow:inset 0 0 22px #86d8ff24}
+.haro-unit:focus-visible{outline:2px solid #fff9d9}
+.haro-unit.selected{box-shadow:inset 0 0 6px #93d9ff4a}
+#pod-green{left:0;width:34%}
+#pod-orange{left:27%;width:46%;z-index:6}
+#pod-purple{right:0;width:34%}
+.haro-speaking-indicator{position:absolute;top:8px;right:10px;z-index:8;padding:5px 9px;
+ color:#e9ffff;background:#063b49e8;border:1px solid #49a5cc;border-radius:4px;
+ font-size:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+.haro-scene.talking .haro-speaking-indicator{opacity:1}
+.haro-art-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px;
+ padding:9px 8px;background:#081625;border:1px solid #24526b}
+.haro-art-controls .btn{font-size:11px;padding:8px 10px}
+.haro-art-controls .haro-purple-btn{border-color:#b474eb;color:#e0c7ff}
+.haro-speed-label{display:flex;align-items:center;gap:6px;color:#b8d8e8;font-size:11px}
+.haro-speed-label select{color:#e8f9ff;border:1px solid #366a81;border-radius:4px;background:#09283d;
+ padding:6px 8px;font-size:11px;max-width:210px}
+.haro-ear-state{text-align:center;padding:7px;background:#040b16;color:#c5edff;font-size:10px}
+.haro-method-note{font-size:10px;line-height:1.6;color:#86acc2;text-align:center;padding:5px 8px 10px;background:#040b16}
+.msg.purple{border-color:#a769ed;background:#8738c426}
 @media(max-width:560px){
- .haro-arena{height:clamp(230px,73vw,330px);border-radius:7px 7px 0 0}
- .haro-unit{width:50%}
- #pod-green{left:-4%;bottom:3%}
- #pod-purple{right:-4%;bottom:3%}
- #pod-orange{left:50%;bottom:0}
- .haro-tag{font-size:8px;letter-spacing:0;padding:3px 5px}
- .hangar-label{top:8px;left:8px;font-size:8px;letter-spacing:.5px}
- .haro-floor-label{left:6px;bottom:5px;font-size:7px;letter-spacing:0}
- .hangar-monitor{opacity:.45}
- .haro-art-controls .btn{font-size:10px;padding:7px}
-}
-@media(prefers-reduced-motion:reduce){
- .haro-unit.speaking .hatch-left,.haro-unit.speaking .hatch-right{animation-duration:2.6s}
- .haro-unit.speaking .eye-pair{animation-duration:1.3s}
- .haro-unit.speaking .haro-vector{animation:none}
+ .stage.gif-stage{height:auto}
+ .haro-art-controls .btn{font-size:10px;padding:7px 8px}
+ .haro-method-note{font-size:9px}
+ .haro-scene .haro-speaking-indicator{font-size:9px}
 }
 </style>
 </head>
@@ -169,300 +98,41 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
 <!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <!-- HARO VECTOR STAGE: 添付画像は設計資料のみ。キャラクターはすべて独立したインラインSVGで描画する。 -->
-<section class="stage vector-stage" aria-label="緑・オレンジ・紫の3AIハロ型ユニット">
- <div class="haro-arena" id="haro-art-stage" data-speaker="" data-selected="orange">
-  <div class="hangar-ceiling" aria-hidden="true"></div>
-  <div class="hangar-monitor" aria-hidden="true"><div class="hangar-radar"></div><div class="hangar-lines"></div></div>
-  <div class="hangar-floor" aria-hidden="true"></div>
-  <div class="hangar-label">TRE / MULTI AGENT SYSTEM <span>UNIT-03</span></div>
-  <div class="haro-deck" aria-label="3体のハロ">
-   <button type="button" class="haro-unit haro-green" id="pod-green"
-  onclick="selectHaro('green')" aria-label="NEMESIS green ハロを選択" title="NEMESIS">
- <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <defs>
-    <radialGradient id="green-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#c9f393"/><stop offset="28%" stop-color="#68b54d"/>
-      <stop offset="77%" stop-color="#68b54d"/><stop offset="100%" stop-color="#245e30"/>
-    </radialGradient>
-    <linearGradient id="green-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#c9f393"/><stop offset="46%" stop-color="#68b54d"/>
-      <stop offset="100%" stop-color="#245e30"/>
-    </linearGradient>
-    <linearGradient id="green-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
-    </linearGradient>
-    <radialGradient id="green-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
-  </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#green-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#green-shell)" stroke="#326b40" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#green-hatch)" stroke="#326b40" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c9f393" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#green-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-  </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
-    <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#green-hatch)" stroke="#326b40" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c9f393" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#green-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-    </g>
-  </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
-  <g class="eye-pair">
-   <ellipse class="eye" cx="136" cy="163" rx="6.4" ry="10" fill="#f5baff"/>
-   <ellipse class="eye" cx="184" cy="163" rx="6.4" ry="10" fill="#f5baff"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#245e30" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#c9f393" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#466e31" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#466e31" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#326b40" stroke-width="4" opacity=".7"/>
- </svg>
- <span class="haro-tag">NEMESIS</span>
-</button>
-   <button type="button" class="haro-unit haro-purple" id="pod-purple"
-  onclick="selectHaro('purple')" aria-label="CHAOS purple ハロを選択" title="CHAOS">
- <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <defs>
-    <radialGradient id="purple-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#c3a1f7"/><stop offset="28%" stop-color="#6e4b9f"/>
-      <stop offset="77%" stop-color="#6e4b9f"/><stop offset="100%" stop-color="#241c4d"/>
-    </radialGradient>
-    <linearGradient id="purple-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#c3a1f7"/><stop offset="46%" stop-color="#6e4b9f"/>
-      <stop offset="100%" stop-color="#241c4d"/>
-    </linearGradient>
-    <linearGradient id="purple-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
-    </linearGradient>
-    <radialGradient id="purple-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
-  </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#purple-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#purple-shell)" stroke="#433063" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#purple-hatch)" stroke="#433063" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c3a1f7" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#purple-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-  </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
-    <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#purple-hatch)" stroke="#433063" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#c3a1f7" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#purple-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-    </g>
-  </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
-  <g class="eye-pair">
-   <path class="eye" d="M114 159 L148 168 Q142 177 130 176 L115 170 Z" fill="#ff203f"/>
-   <path class="eye" d="M206 159 L172 168 Q178 177 190 176 L205 170 Z" fill="#ff203f"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#241c4d" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#c3a1f7" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#3c286a" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#3c286a" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#433063" stroke-width="4" opacity=".7"/>
- </svg>
- <span class="haro-tag">CHAOS</span>
-</button>
-   <button type="button" class="haro-unit haro-orange selected" id="pod-orange"
-  onclick="selectHaro('orange')" aria-label="LOGOS orange ハロを選択" title="LOGOS">
- <svg class="haro-vector" viewBox="0 0 320 330" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <defs>
-    <radialGradient id="orange-shell" cx="36%" cy="22%" r="84%">
-      <stop offset="0%" stop-color="#ffe295"/><stop offset="28%" stop-color="#ff9521"/>
-      <stop offset="77%" stop-color="#ff9521"/><stop offset="100%" stop-color="#9c4216"/>
-    </radialGradient>
-    <linearGradient id="orange-hatch" x1="0" y1="0" x2=".87" y2="1">
-      <stop offset="0%" stop-color="#ffe295"/><stop offset="46%" stop-color="#ff9521"/>
-      <stop offset="100%" stop-color="#9c4216"/>
-    </linearGradient>
-    <linearGradient id="orange-metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1f7ff"/><stop offset="21%" stop-color="#a5adc0"/>
-      <stop offset="48%" stop-color="#6c708e"/><stop offset="78%" stop-color="#b8c5d1"/>
-      <stop offset="100%" stop-color="#252c42"/>
-    </linearGradient>
-    <radialGradient id="orange-hinge"><stop stop-color="#fff1be"/><stop offset="60%" stop-color="#e4a662"/><stop offset="100%" stop-color="#5f3440"/></radialGradient>
-  </defs>
-  <!-- 床に落ちる影と、下側の銀色の台座 -->
-  <ellipse cx="160" cy="303" rx="125" ry="21" fill="#000" opacity=".45"/>
-  <path d="M57 246 Q159 265 263 246 L276 287 Q268 312 160 316 Q54 312 44 287 Z" fill="url(#orange-metal)" stroke="#22253b" stroke-width="4"/>
-  <path d="M58 271 Q160 290 262 271" fill="none" stroke="#fff" stroke-width="4" opacity=".45"/>
-  <path d="M146 278 H174 V308 H146Z" fill="#22283d" stroke="#d1d8e6" stroke-width="2"/>
-  <path d="M155 282 H165 V293 H155 Z" fill="#8797ad" stroke="#121727" stroke-width="1"/>
-  <!-- 球状の装甲と反射：装甲自体は発話時にも形を変えない -->
-  <circle class="haro-shell" cx="160" cy="167" r="113" fill="url(#orange-shell)" stroke="#a65b26" stroke-width="4.4"/>
-  <path d="M70 126 C84 82 114 66 148 65" fill="none" stroke="#fff" stroke-width="8.5" opacity=".17" stroke-linecap="round"/>
-  <path d="M219 90 Q244 112 256 142" fill="none" stroke="#f9d6ff" stroke-width="4" opacity=".12"/>
-  <!-- 左耳と右耳。右は同じ図形を反転し、形状の完全一致を保証する。 -->
-  <g class="ear-module ear-module-left">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-    <g class="hatch hatch-left">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#orange-hatch)" stroke="#a65b26" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#ffe295" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#orange-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-  </g>
-  <g transform="translate(320 0) scale(-1 1)" class="ear-mirror">
-    <g class="ear-module ear-module-right">
- <g class="ear-cavity">
-   <path d="M91 81 C60 71 40 87 36 119 C30 142 35 163 55 172 C83 175 99 130 91 81Z" fill="#5b2752" stroke="#170d27" stroke-width="4"/>
-   <path d="M84 89 C62 82 48 98 44 122 C40 141 43 150 58 157 C79 148 94 116 84 89Z" fill="#8a3f79" opacity=".85"/>
-   <path d="M71 96 Q49 120 56 145" fill="none" stroke="#e59db3" stroke-width="3" opacity=".85"/>
-   <ellipse cx="63" cy="126" rx="15" ry="29" transform="rotate(25 63 126)" fill="#d8bc97" stroke="#66485d" stroke-width="3"/>
-   <path d="M52 109 Q68 119 55 136 M60 103 Q78 118 63 142 M66 102 Q82 121 67 141" fill="none" stroke="#8f7b71" stroke-width="4" opacity=".85"/>
-   <circle cx="88" cy="88" r="9" fill="#9ca4b3" stroke="#47384e" stroke-width="3"/>
-   <circle cx="88" cy="88" r="4" fill="#e4ebf9"/>
- </g>
-      <g class="hatch hatch-right">
- <g class="hatch-leaf">
-   <!-- 閉時は外装曲面に沿って収まり、開くとヒンジ点(88,88)を軸に葉状の外板が跳ね上がる。 -->
-   <path d="M87 86 C58 63 29 74 18 108 C7 142 16 165 43 175 C72 159 98 129 87 86Z"
-      fill="url(#orange-hatch)" stroke="#a65b26" stroke-width="3.5" />
-   <path d="M84 91 C55 73 34 88 28 115 C22 137 25 149 40 160"
-      fill="none" stroke="#ffe295" stroke-width="5.5" stroke-linecap="round" opacity=".54"/>
-   <path d="M71 156 Q86 127 84 103" stroke="#421a49" stroke-width="1.5" opacity=".55"/>
-   <ellipse cx="85" cy="88" rx="7" ry="8" fill="url(#orange-hinge)" stroke="#3b2741" stroke-width="2"/>
-   <circle cx="85" cy="88" r="2.4" fill="#ecf2f8"/>
- </g></g>
-    </g>
-  </g>
-  <!-- 両目は独立したSVG要素なので、発話している個体だけ点滅させられる -->
-  <g class="eye-pair">
-   <ellipse class="eye" cx="136" cy="163" rx="6.4" ry="10" fill="#ffe2ff"/>
-   <ellipse class="eye" cx="184" cy="163" rx="6.4" ry="10" fill="#ffe2ff"/>
- </g>
-  <!-- 頬と口の外装分割線：ハロ特有の緩やかな曲線 -->
-  <path d="M48 196 C76 219 112 224 160 205 C204 187 236 200 272 192"
-    fill="none" stroke="#9c4216" stroke-width="3" opacity=".9"/>
-  <path d="M62 202 C84 218 104 219 122 217" fill="none" stroke="#ffe295" stroke-width="2" opacity=".25"/>
-  <path d="M54 142 Q74 109 94 105" fill="none" stroke="#c96f22" stroke-width="2.4" opacity=".45"/>
-  <path d="M266 142 Q246 109 226 105" fill="none" stroke="#c96f22" stroke-width="2.4" opacity=".45"/>
-  <!-- 本体下部のロックリングが頭部を固定 -->
-  <path d="M63 257 Q160 289 257 257" fill="none" stroke="#a65b26" stroke-width="4" opacity=".7"/>
- </svg>
- <span class="haro-tag">LOGOS</span>
-</button>
+<!-- HARO METHOD 1: GIFの8フレームをそのまま使う方式。待機中は必ず耳を閉じたWebP静止画。 -->
+<section class="stage gif-stage" aria-label="緑・オレンジ・紫の3AIハロ型ユニット GIFアニメーション">
+  <div class="haro-scene" id="haro-art-stage" data-speaker="" data-selected="orange">
+    <!-- 待機・発話終了時はGIFの第1フレームに相当する静止画を表示する。 -->
+    <img class="haro-scene-frame" id="haro-idle" src="/assets/haro-idle.webp"
+      alt="左は緑のNEMESIS、中央手前はオレンジのLOGOS、右は紫のCHAOS。3体とも耳を閉じた待機状態。"
+      width="507" height="378" decoding="async">
+    <!-- srcは発話開始時だけ設定する。待機中はGIFをロード・再生しない。 -->
+    <img class="haro-scene-frame haro-animation" id="haro-animation"
+      width="507" height="378" alt="" aria-hidden="true" hidden>
+    <!-- 画面上で各AIを選択できる透明な操作領域。GIFの描画データは書き換えない。 -->
+    <button type="button" class="haro-unit haro-green" id="pod-green" onclick="selectHaro('green')"
+      aria-label="緑ハロ NEMESIS を選択" title="緑 / NEMESIS"></button>
+    <button type="button" class="haro-unit haro-orange selected" id="pod-orange" onclick="selectHaro('orange')"
+      aria-label="オレンジハロ LOGOS を選択" title="橙 / LOGOS"></button>
+    <button type="button" class="haro-unit haro-purple" id="pod-purple" onclick="selectHaro('purple')"
+      aria-label="紫ハロ CHAOS を選択" title="紫 / CHAOS"></button>
+    <div class="haro-speaking-indicator" id="haro-speaker-indicator" aria-hidden="true"></div>
   </div>
-  <div class="haro-floor-label" aria-hidden="true">LOGOS / NEMESIS / CHAOS <span>VISUAL ENGINE v2</span></div>
- </div>
- <div class="haro-art-controls">
-   <button type="button" class="btn" onclick="selectHaro('green')">緑 / NEMESIS</button>
-   <button type="button" class="btn orange" onclick="selectHaro('orange')">橙 / LOGOS</button>
-   <button type="button" class="btn haro-purple-btn" onclick="selectHaro('purple')">紫 / CHAOS</button>
-   <button type="button" class="btn" id="haro-motion-test" onclick="previewHaroMotion()"
-     aria-label="選択中のハロの実際の耳ハッチを約5秒間開閉させる">耳・目の動作テスト</button>
- </div>
- <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話中のみ開閉）</div>
+  <div class="haro-art-controls">
+    <button class="btn" type="button" onclick="selectHaro('green')">緑 / NEMESIS</button>
+    <button class="btn orange" type="button" onclick="selectHaro('orange')">橙 / LOGOS</button>
+    <button class="btn haro-purple-btn" type="button" onclick="selectHaro('purple')">紫 / CHAOS</button>
+    <button class="btn" type="button" id="haro-motion-test" onclick="previewHaroMotion()"
+      aria-label="ハロGIFを約5秒間再生して待機状態へ戻す">耳・目の動作テスト</button>
+    <!-- GIFはCSSの再生速度指定が使えないため、遅延時間を編集した2種類のGIFを選択する。 -->
+    <label class="haro-speed-label" for="haro-speed">耳の速度
+      <select id="haro-speed" onchange="haroVisual.setPlaybackMode(this.value)">
+        <option value="fast" selected>高速（開く速さ 約2倍）</option>
+        <option value="normal">標準（元の速度）</option>
+      </select>
+    </label>
+  </div>
+  <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話時のみGIF再生）</div>
+  <div class="haro-method-note">方式1：発話者の選択はチャットへ反映。アニメーションは3体が同時に動くGIFです。</div>
 </section>
 <!-- TRE-UI: 各機能の表示パネル。データ解析・判定の出力先を含む。 -->
 <main class="main">
@@ -595,59 +265,109 @@ function sendChatMessage(){const input=$('chat-input');const message=input.value
  * 音声同期とプレビュー用の状態管理。
  * SVGの各ヒンジ要素をCSSアニメーションするため、画像切替処理は不要。
  */
-class HaroVectorMotionController {
+/**
+ * HARO GIF方式: 発話中のみに元の8フレームGIFを再生するコントローラー。
+ * - IDLE: GIFの初期フレームをWebPとして表示。
+ * - SPEAKING: 動画用IMGへsrcを設定してGIFの1フレーム目から再生。
+ * - STOP: GIFのsrcを破棄して閉じた静止画へ即時復帰。
+ * 注意: GIFは3体を一枚にまとめた映像のため、全ハロが同時に動く。
+ * 3体の個別アニメーション制御が必要なら方式2（SVG）を使うこと。
+ */
+class HaroGifPlaybackController {
   constructor(stageId){
     this.stageId=stageId;
-    this.timer=null;
-    this.previewUnit=null;
+    this.previewTimer=null;
+    this.speaker=null;
+    this.generation=0;
+    // 高速が標準。元GIFも残しているため比較／変更可能。
+    this.playbackMode='fast';
   }
-  get stage(){return document.getElementById(this.stageId);}
+  get stage(){return $(this.stageId);}
+  get animation(){return $('haro-animation');}
+  get gifPath(){
+    return this.playbackMode==='fast'
+      ? '/assets/haro-speaking-fast.gif'
+      : '/assets/haro-speaking.gif';
+  }
+  /**
+   * 速度の選択を保持。発話中に変更してもタイマーを解除せず、
+   * 現在のGIFだけ先頭フレームから切り替える。
+   */
+  setPlaybackMode(value){
+    if(value!=='fast'&&value!=='normal')return;
+    this.playbackMode=value;
+    if(this.speaker)this._startGif(this.speaker);
+    this.sync();
+  }
+  /** ファイルを切り替えてGIFを最初のフレームから再生する。 */
+  _startGif(id){
+    const stage=this.stage;
+    const gif=this.animation;
+    stage.classList.remove('loaded');
+    gif.hidden=false;
+    const serial=++this.generation;
+    gif.onload=()=>{
+      if(serial===this.generation&&this.speaker===id)stage.classList.add('loaded');
+    };
+    gif.onerror=()=>{
+      if(serial===this.generation){
+        this._idle();
+        $('haro-ear-state').textContent='GIF読み込み失敗。静止画像へ戻りました。';
+      }
+    };
+    gif.src=this.gifPath+'?play='+serial;
+  }
+  stopPreview(){
+    clearTimeout(this.previewTimer);
+    this.previewTimer=null;
+  }
   setSpeaker(id,enabled){
     const stage=this.stage;
-    if(!stage)return;
-    // 発話開始のときはプレビューより実際の音声を優先。
+    if(!stage||!agentNames[id])return;
     if(enabled){
-      clearTimeout(this.timer);
-      this.timer=null;
-      if(this.previewUnit&&this.previewUnit!==id){
-        $('pod-'+this.previewUnit)?.classList.remove('speaking','voice-accent');
-      }
-      this.previewUnit=null;
+      this.stopPreview();
+      // 新しい読み上げは常にGIFを先頭フレームから再生する。
+      this.speaker=id;
       stage.dataset.speaker=id;
-    } else if(stage.dataset.speaker===id){
-      stage.dataset.speaker='';
-    }
-    const current=stage.dataset.speaker||'';
-    for(const unit of stage.querySelectorAll('.haro-unit')){
-      if(enabled || !current)unit.classList.toggle('speaking',unit.id==='pod-'+current);
+      stage.classList.add('talking');
+      this._startGif(id);
+    }else if(this.speaker===id){
+      this._idle();
     }
     this.sync();
   }
-  sync(){
+  _idle(){
+    this.stopPreview();
+    this.generation++;
+    this.speaker=null;
     const stage=this.stage;
-    if(!stage)return;
-    const id=stage.dataset.speaker||'';
-    stage.classList.toggle('talking',Boolean(id));
-    if(!id)stage.classList.remove('voice-accent');
-    $('haro-ear-state').textContent=id
-      ? 'SPEAKING / ヒンジ OPEN ⇄ CLOSED・目 GLOW / '+agentNames[id]
-      : 'IDLE / 耳 CLOSED（発話中のみ開閉）';
+    stage.dataset.speaker='';
+    stage.classList.remove('talking','loaded','voice-accent');
+    const gif=this.animation;
+    gif.removeAttribute('src');
+    gif.hidden=true;
+  }
+  sync(){
+    const speaker=this.speaker;
+    $('haro-speaker-indicator').textContent=speaker?'VOICE / '+agentNames[speaker]:'';
+    const speed=this.playbackMode==='fast'?'高速・1周1.02秒':'標準・1周1.44秒';
+    $('haro-ear-state').textContent=speaker
+      ? 'SPEAKING / '+speed+'・耳 OPEN ⇄ CLOSED・目 GLOW / '+agentNames[speaker]
+      : 'IDLE / 耳 CLOSED（'+speed+'／発話時のみGIF再生）';
   }
   preview(){
     if(haroSpeech.speaking)return;
-    const id=currentHaro||'orange';
-    this.previewUnit=id;
-    this.setSpeaker(id,true);
-    this.previewUnit=id;
-    this.timer=setTimeout(()=>{
+    const selected=currentHaro||'orange';
+    this.setSpeaker(selected,true);
+    // 高速GIFは1周1.02秒。約4.6秒の動作テスト後に閉耳へ戻す。
+    this.previewTimer=setTimeout(()=>{
       if(!haroSpeech.speaking){
-        $('pod-'+id)?.classList.remove('speaking','voice-accent');
-        this.setSpeaker(id,false);
+        this.setSpeaker(selected,false);
       }
     },4600);
   }
 }
-const haroVisual=new HaroVectorMotionController('haro-art-stage');
+const haroVisual=new HaroGifPlaybackController('haro-art-stage');
 function updateHaroEars(){haroVisual.sync();}
 function setHaroArtSpeaking(id,enabled){haroVisual.setSpeaker(id,enabled);}
 function previewHaroMotion(){haroVisual.preview();}
