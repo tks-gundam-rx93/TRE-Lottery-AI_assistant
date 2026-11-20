@@ -174,7 +174,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 </section>
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
-<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1,n2,n3,n4,n5,n6,n7（b1,b2は任意）。自動Web取得は行いません。</div></section>
+<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
 <!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
 <section class="panel"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
@@ -221,19 +221,47 @@ async function scanLottery(){const game=$('lottery-select').value;if(game!=='lot
 /** TRE-UI: くじ種別変更時の案内を更新。LOTO6とNUMBERS4は未実装。 */
 function onLotteryChange(){$('lottery-result-area').textContent=$('lottery-select').value==='loto7'?'LOTO7を選択中。SCANで予測します。':'現在はLOTO7のみ実装済みです。'}
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
-async function uploadCsv(){const input=$('csv-input'),status=$('csv-status');if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}const file=input.files[0];if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}status.textContent='CSVを検証中...';try{const response=await fetch('/api/history/upload',{method:'POST',headers:{'content-type':'text/csv'},body:await file.arrayBuffer()});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);activeSession=d.session;sessionStorage.setItem('tre_loto7_session',activeSession);if(d.mode==='MYSQL'){
-  dbBackend='mysql';
-  activeSession=null;
-  sessionStorage.removeItem('tre_loto7_session');
-  status.textContent=d.message+' / 第'+d.last_draw+'回まで';
-  $('db-status').textContent='MySQL 接続済：'+d.count+'回';
-}else{
-  status.textContent=d.count+'件（第'+d.last_draw+'回まで）取込完了。1時間・再起動までのセッションです。';
-}$('hist-val').textContent=d.count+'回';addLog('green','[CSV] '+d.count+'件取込完了。SCANで分析できます。')}catch(e){status.textContent='取込エラー: '+e.message}}
+async function uploadCsv(){
+  const input=$('csv-input'),status=$('csv-status');
+  if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}
+  const file=input.files[0];
+  if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}
+  const headers={'content-type':'text/csv'};
+  if(dbBackend==='mysql'){
+    const token=$('csv-admin-token').value;
+    if(!token){status.textContent='クラウドMySQLへの登録にはDB管理者トークンが必要です。';return}
+    // 管理用トークンはブラウザのlocalStorage/sessionStorageに保存しない。
+    headers.authorization='Bearer '+token;
+  }
+  status.textContent='CSV検証・登録中...';
+  try{
+    const response=await fetch('/api/history/upload',{
+      method:'POST',headers,body:await file.arrayBuffer()});
+    const data=await response.json();
+    if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
+    if(data.mode==='MYSQL'){
+      dbBackend='mysql';activeSession=null;
+      sessionStorage.removeItem('tre_loto7_session');
+      status.textContent=data.message+' / 第'+data.last_draw+'回まで';
+      $('db-status').textContent='クラウドMySQL：'+data.count+'回（永続保存）';
+    }else{
+      activeSession=data.session;
+      sessionStorage.setItem('tre_loto7_session',activeSession);
+      status.textContent=data.count+'件（第'+data.last_draw+'回まで）取込完了。メモリ保存は1時間です。';
+    }
+    $('hist-val').textContent=data.count+'回';
+    addLog('green','[CSV] '+data.count+'件確認。SCANで分析できます。');
+  }catch(error){
+    status.textContent='取込エラー: '+error.message;
+  }finally{
+    // パスワード欄には値を残さない。
+    $('csv-admin-token').value='';
+  }
+}
 /** TRE-UI: CSVセッションを解除し、架空履歴のデモモードに戻す。 */
 function resetDemo(){
   if(dbBackend==='mysql'){
-    $('csv-status').textContent='MySQLに登録した履歴は永続保存されます。デモへ切替えたい場合は公開Render版を使用してください。';
+    $('csv-status').textContent='クラウドMySQLに登録した履歴は永続保存されます。本番DBの履歴を削除・切替える操作はありません。';
     return;
   }
   activeSession=null;sessionStorage.removeItem('tre_loto7_session');$('csv-status').textContent='架空の抽せん履歴で動作デモを実行します。';$('hist-val').textContent='DEMO';addLog('orange','[MODE] デモに戻しました。')}
@@ -789,16 +817,19 @@ async function initializeHaroSystem(){
     dbBackend=db.backend;
     $('db-status').textContent=
       db.backend==='mysql' ? (
-        db.status==='connected' ? 'MySQL 接続済：'+db.draw_count+'回 / phpMyAdminで管理'
-                                : 'MySQL 接続エラー：XAMPPのMySQLと接続設定を確認'
+        db.status==='connected' ? 'クラウドMySQL 接続済：'+db.draw_count+'回 / 最新回：'+(db.last_draw||'未登録')
+                                : 'クラウドMySQL 接続エラー：RenderのDB環境変数・ネットワークを確認'
       ) : 'DB：メモリモード（公開サイト）';
     setStatus(db.status==='unavailable'?'DB OFFLINE':'ONLINE / READY',db.status!=='unavailable');
     $('api-val').textContent='READY';
     $('hist-val').textContent=db.backend==='mysql'?db.draw_count+'回':(activeSession?'SESSION':'DEMO');
     $('mlp-val').textContent='READY';
+    $('csv-admin-wrap').style.display=db.backend==='mysql'?'inline-flex':'none';
     if(db.backend==='mysql'){
       activeSession=null;sessionStorage.removeItem('tre_loto7_session');
-      $('csv-status').textContent='CSVを取り込むとMySQLへ永続保存されます。既存の番号は重複登録しません。';
+      $('csv-status').textContent=db.draw_count>=20
+        ? '保存済みの実際の当せん履歴を使います。CSV取込は管理者トークンが必要です。'
+        : 'MySQLは接続済みですが履歴が20回未満です。CSVを取り込んでください。';
     }else if(activeSession){
       $('csv-status').textContent='CSVセッションを復元しました。有効期限は1時間です。';
     }
