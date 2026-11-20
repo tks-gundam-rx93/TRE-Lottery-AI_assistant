@@ -139,7 +139,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <!-- TRE-UI: 架空のCPU/GPU負荷は表示せず、API関連の実用状態を表示。 -->
 <section class="panel"><h2>SYSTEM TELEMETRY <small id="telemetry-clock">--:--:--</small></h2><div class="telemetry"><div class="meter"><label>API STATUS</label><strong id="api-val">—</strong><div class="bar"></div></div><div class="meter"><label>CSV HISTORY</label><strong id="hist-val">—</strong><div class="bar"></div></div><div class="meter"><label>MLP TRAIN</label><strong id="mlp-val">—</strong><div class="bar"></div></div><div class="meter"><label>API LATENCY</label><strong id="ping-val">—</strong><div class="bar"></div></div></div></section>
 <!-- TRE-UI: 予測対象と実行ボタン。現時点の予測機能はLOTO7のみ対応。 -->
-<section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（未実装）</option><option value="numbers4">NUMBERS4（未実装）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
+<section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（履歴DB対応・予測は準備中）</option><option value="numbers4">NUMBERS4（履歴DB対応・予測は準備中）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
 
 <!-- VOICE: ブラウザのマイク許可を得て「おーい、ハロ」を待ち受ける。 -->
 <section class="panel voice-panel" aria-labelledby="voice-heading">
@@ -174,7 +174,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 </section>
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
-<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
+<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>3 GAMES / LOTO7 UPLOAD</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note" id="other-game-history-status" role="status">LOTO6 / NUMBERS4：履歴件数を確認中。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
 <!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
 <section class="panel"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
@@ -805,6 +805,33 @@ const voiceAssistant=new HaroVoiceAssistant();
 voiceAssistant.readCycle=0;
 
 
+/**
+ * LOTO6とNUMBERS4の実履歴件数をクラウドDBから確認する。
+ * 抽せん日の列が元CSVにない場合はNULLとして保存している。
+ * この2種の予測機能は未実装のため、予測成功を装わない。
+ */
+async function refreshAdditionalHistoryStatus(){
+  const target=$('other-game-history-status');
+  if(dbBackend!=='mysql'){
+    target.textContent='LOTO6 / NUMBERS4：クラウドMySQL未接続';
+    return;
+  }
+  try{
+    const games=['LOTO6','NUMBERS4'];
+    const results=await Promise.all(games.map(async game=>{
+      const response=await fetch('/api/history/status/'+game);
+      if(!response.ok)throw Error('HTTP '+response.status);
+      return await response.json();
+    }));
+    target.textContent=results.map((item,i)=>
+      games[i]+' '+item.draw_count+'件（第'+(item.first_draw??'—')+
+      '～'+(item.last_draw??'—')+'回）'
+    ).join(' / ')+' ｜両種の予測は準備中';
+  }catch(error){
+    target.textContent='LOTO6 / NUMBERS4：履歴照会できません（'+error.message+'）';
+  }
+}
+
 /** 起動後にのみ時計とAPI接続確認を開始する。起動前はfetchしない。 */
 async function initializeHaroSystem(){
   const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');
@@ -820,6 +847,7 @@ async function initializeHaroSystem(){
         db.status==='connected' ? 'クラウドMySQL 接続済：'+db.draw_count+'回 / 最新回：'+(db.last_draw||'未登録')
                                 : 'クラウドMySQL 接続エラー：RenderのDB環境変数・ネットワークを確認'
       ) : 'DB：メモリモード（公開サイト）';
+    await refreshAdditionalHistoryStatus();
     setStatus(db.status==='unavailable'?'DB OFFLINE':'ONLINE / READY',db.status!=='unavailable');
     $('api-val').textContent='READY';
     $('hist-val').textContent=db.backend==='mysql'?db.draw_count+'回':(activeSession?'SESSION':'DEMO');
