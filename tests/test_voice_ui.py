@@ -32,6 +32,6 @@ def test_speech_recognition_and_echo_prevention():
 
 def test_original_prediction_api_endpoints():
     page = UI.read_text(encoding="utf-8")
-    assert "fetch('/api/predict'" in page
+    assert "requestLottery('/api/predict'" in page
     assert "fetch('/api/history/upload'" in page
     assert "fetch('/api/health'" in page

@@ -2,25 +2,34 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TRE-Lottery AI Assistant | HARO-X3</title>
+<title>TRE-THESAURUS By AIハローX3</title>
 <style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
 :root{--bg:#050811;--cyan:#00e5ff;--green:#00ff66;--orange:#ff870e;--blue:#3475ff;--panel:rgba(5,15,30,.93);--border:rgba(0,229,255,.33)}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;color:#bfeeff;font:12px 'Courier New',monospace;background:linear-gradient(rgba(0,229,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.035) 1px,transparent 1px),var(--bg);background-size:20px 20px}
 /* TRE-UI: ヘッダー：名称とサーバー状態の表示領域。 */
-header{padding:12px 18px;border-bottom:2px solid var(--cyan);box-shadow:0 0 22px rgba(0,229,255,.25);display:flex;align-items:center;justify-content:space-between;background:#091829;gap:12px}
-header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:0 0 10px #00a6ce}#system-status-badge{font-size:10px;color:#ffc078;border:1px solid #267d87;padding:5px 8px;border-radius:3px}
+header{padding:12px clamp(12px,4vw,28px);border-bottom:1px solid #2686a4;
+ box-shadow:0 4px 28px #00e5ff20;display:flex;align-items:center;justify-content:space-between;
+ gap:10px;background:linear-gradient(110deg,#0e2639,#07101e 65%,#142741)}
+.app-title{margin:0;color:#effbff;font:800 clamp(16px,4.5vw,27px)/1.15 system-ui,sans-serif;
+ letter-spacing:.045em;text-shadow:0 0 14px #00d2ff70}
+.app-title span{display:inline-block;color:#6cf5da;font-size:.61em;white-space:nowrap;letter-spacing:.025em}
+#system-status-badge{font-size:10px;color:#ffc078;border:1px solid #267d87;padding:5px 8px;border-radius:3px}
 /* TRE-UI: 状態表示・予測・CSV・3AI評価・チャットの各パネル配置。 */
 .main{width:min(720px,100%);margin:auto;padding:16px;display:grid;gap:14px}.panel{border:1px solid var(--border);background:var(--panel);box-shadow:inset 0 0 14px rgba(0,229,255,.06);padding:12px;border-radius:5px;position:relative}.panel:before,.panel:after{position:absolute;content:'';width:7px;height:7px}.panel:before{top:-1px;left:-1px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan)}.panel:after{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan)}.panel h2{font-size:12px;color:var(--cyan);letter-spacing:1.5px;margin:0 0 12px;border-bottom:1px solid #19405a;padding-bottom:9px;display:flex;justify-content:space-between;align-items:center}.panel h2 small{font-size:9px;color:#68f9cb;letter-spacing:0}
 /* TRE-UI: API・CSV履歴・MLP学習・通信時間の状態計器。 */
 .telemetry{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.meter{border:1px solid #224a60;background:#03111d;text-align:center;padding:8px 3px;border-radius:3px}.meter label{display:block;color:#69869c;font-size:9px}.meter strong{display:block;color:#00ffc2;padding:5px 0;font-size:13px}.bar{height:3px;background:linear-gradient(90deg,var(--cyan) 45%,#163348 45%)}
 /* TRE-UI: くじ選択とボタン類の共通デザイン。 */
-.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.controls>*{flex-shrink:0}.controls select,.controls input[type=text]{background:#021018;color:var(--cyan);border:1px solid var(--cyan);padding:10px;font:inherit;min-width:0;border-radius:3px}.controls select{flex:1;min-width:170px}.btn{cursor:pointer;background:linear-gradient(145deg,#12374d,#0b2339);color:var(--cyan);border:1px solid var(--cyan);border-radius:3px;padding:10px 12px;font:inherit;font-weight:bold}.btn:disabled{opacity:.5;cursor:wait}.btn:focus-visible,.haro:focus-visible{outline:2px solid #fff}.btn.orange{border-color:var(--orange);color:#ffb862;background:linear-gradient(145deg,#46301c,#1a1420)}.result{margin-top:10px;background:#020811;border:1px dashed #315c77;padding:10px;min-height:48px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}.lotto-ball{display:inline-flex;align-items:center;justify-content:center;flex:0 1 34px;min-width:0;aspect-ratio:1;border-radius:50%;font-size:13px;font-weight:900;box-shadow:inset -3px -4px 7px #0007,inset 2px 3px 5px #fff7,0 1px 5px #0008;border:1px solid #fffa}.ball-white{background:radial-gradient(circle at 25% 25%,white,#aaa);color:#111}.ball-yellow{background:radial-gradient(circle at 25% 25%,#fff77b,#e7a800);color:#111}.ball-green{background:radial-gradient(circle at 25% 25%,#8ff79f,#078935);color:#fff}.ball-red{background:radial-gradient(circle at 25% 25%,#ff8d8d,#c31925);color:#fff}.ball-blue{background:radial-gradient(circle at 25% 25%,#7bb7ff,#1453c7);color:#fff}.ball-pink{background:radial-gradient(circle at 25% 25%,#ffc2e6,#d52b7f);color:#fff}.ball-purple{background:radial-gradient(circle at 25% 25%,#d6a9ff,#5510bd);color:#fff}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.controls>*{flex-shrink:0}.controls select,.controls input[type=text]{background:#021018;color:var(--cyan);border:1px solid var(--cyan);padding:10px;font:inherit;min-width:0;border-radius:3px}.controls select{flex:1;min-width:170px}.btn{cursor:pointer;background:linear-gradient(145deg,#12374d,#0b2339);color:var(--cyan);border:1px solid var(--cyan);border-radius:3px;padding:10px 12px;font:inherit;font-weight:bold}.btn:disabled{opacity:.5;cursor:wait}.btn:focus-visible,.haro:focus-visible{outline:2px solid #fff}.btn.orange{border-color:var(--orange);color:#ffb862;background:linear-gradient(145deg,#46301c,#1a1420)}.lotto-ball{display:inline-flex;align-items:center;justify-content:center;flex:0 1 34px;min-width:0;aspect-ratio:1;border-radius:50%;font-size:13px;font-weight:900;box-shadow:inset -3px -4px 7px #0007,inset 2px 3px 5px #fff7,0 1px 5px #0008;border:1px solid #fffa}.ball-white{background:radial-gradient(circle at 25% 25%,white,#aaa);color:#111}.ball-yellow{background:radial-gradient(circle at 25% 25%,#fff77b,#e7a800);color:#111}.ball-green{background:radial-gradient(circle at 25% 25%,#8ff79f,#078935);color:#fff}.ball-red{background:radial-gradient(circle at 25% 25%,#ff8d8d,#c31925);color:#fff}.ball-blue{background:radial-gradient(circle at 25% 25%,#7bb7ff,#1453c7);color:#fff}.ball-pink{background:radial-gradient(circle at 25% 25%,#ffc2e6,#d52b7f);color:#fff}.ball-purple{background:radial-gradient(circle at 25% 25%,#d6a9ff,#5510bd);color:#fff}
 /* TRE-UI: 補足説明・デモモードの注意文を表示する領域。 */
 .note{font-size:10px;color:#9ab8d1;line-height:1.7;margin-top:8px}.note.warning{color:#ffc078}.upload{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.upload input{flex:1;min-width:170px;color:#d4f6ff;font-size:11px}.report{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:11px;margin:0;color:#bfe1f7}.chat-logs{height:145px;overflow:auto;background:#020912;border:1px solid #1a4159;padding:10px;display:grid;align-content:start;gap:9px}.msg{padding:7px;border-left:3px solid var(--cyan);background:#00bbff12;line-height:1.5}.msg.orange{border-color:var(--orange);background:#ff850014}.msg.green{border-color:var(--green);background:#00ff6611}.msg.user{border-color:#fff;background:#ffffff13}.chat-input{display:flex;gap:8px;margin-top:9px}.chat-input input{flex:1;min-width:0;background:#031524;color:#fff;border:1px solid #205e7a;padding:10px;border-radius:3px}
 /* TRE-UI: 予測候補を表示するモーダルウィンドウ。 */
-.modal{display:none;position:fixed;inset:0;background:#01040bbb;z-index:100;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px)}.modal.open{display:flex}.window{width:min(520px,100%);max-height:90vh;overflow:auto;border:2px solid var(--cyan);box-shadow:0 0 28px #00e5ff50;background:linear-gradient(#10223b,#061122);border-radius:5px}.window-title{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#16344e;border-bottom:1px solid var(--cyan);color:white;font-weight:bold}.window-body{padding:12px;display:grid;gap:9px}.pattern{display:flex;align-items:center;gap:7px;padding:7px;background:#061529;
+.modal{width:min(520px,calc(100% - 28px));max-height:90vh;overflow:auto;padding:0;
+ color:inherit;border:2px solid var(--cyan);box-shadow:0 0 28px #00e5ff50;
+ background:linear-gradient(#10223b,#061122);border-radius:5px}
+.modal::backdrop{background:#01040bbb;backdrop-filter:blur(4px)}
+.window-title{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#16344e;border-bottom:1px solid var(--cyan);color:white;font-weight:bold}.window-body{padding:12px;display:grid;gap:9px}.pattern{display:flex;align-items:center;gap:7px;padding:7px;background:#061529;
  border:1px solid #225474;border-radius:4px;white-space:nowrap}
 .pattern strong{color:var(--orange);font-size:11px;flex:none}
 .ballbox{display:flex;align-items:center;gap:clamp(3px,1vw,6px);flex:1;min-width:0}
@@ -94,7 +103,9 @@ body:not(.debug-mode) .debug-only{display:none}
 .voice-state{margin-top:9px}
 .lottery-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:stretch;gap:6px}
 .lottery-controls select,.lottery-controls .btn{min-width:0;width:100%;white-space:nowrap;padding:9px 7px}
-#lottery-result-window{margin-top:8px}
+.lottery-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lottery-actions .btn{padding:8px;font-size:12px}
+#lottery-result-area{margin-bottom:0}
 .haro-activity{position:absolute;inset:6px 0 auto;z-index:7;pointer-events:none;
  display:grid;justify-items:center;gap:3px;font-size:10px;color:#e2f5ff}
 .haro-activity-rates{display:flex;gap:clamp(14px,6vw,42px);text-align:center}
@@ -107,7 +118,6 @@ body:not(.debug-mode) .debug-only{display:none}
 .haro-activity-rate[data-agent="green"]{--agent-color:var(--green)}
 .haro-activity-rate[data-agent="orange"]{--agent-color:var(--orange)}
 .haro-activity-rate[data-agent="purple"]{--agent-color:var(--purple)}
-#lottery-result-area .pattern{width:100%}
 </style>
 </head>
 <body class="boot-locked">
@@ -117,7 +127,10 @@ body:not(.debug-mode) .debug-only{display:none}
   <label class="boot-mode"><input type="checkbox" id="debug-mode"> デバッグモード</label>
 </div>
 <!-- TRE-UI: ステータスはAPI接続／解析状況に応じてJavaScriptから更新。 -->
-<header class="debug-only"><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
+<header>
+  <h1 class="app-title">TRE-THESAURUS <span>By AIハローX3</span></h1>
+  <span class="debug-only" id="system-status-badge" role="status">CONNECTING</span>
+</header>
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
 <!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <!-- HARO VECTOR STAGE: 添付画像は設計資料のみ。キャラクターはすべて独立したインラインSVGで描画する。 -->
@@ -178,12 +191,12 @@ body:not(.debug-mode) .debug-only{display:none}
 <section class="panel">
   <h2>TARGET LOTTERY</h2>
   <div class="controls lottery-controls">
-    <select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類">
+    <select id="lottery-select" aria-label="宝くじ種類">
       <option value="loto7">LOTO7</option>
       <option value="loto6">LOTO6</option>
       <option value="numbers4">NUMBERS4</option>
     </select>
-    <select id="prediction-count" onchange="onLotteryChange()" aria-label="表示件数">
+    <select id="prediction-count" aria-label="表示件数">
       <option value="1">1通り</option>
       <option value="2">2通り</option>
       <option value="3">3通り</option>
@@ -197,8 +210,12 @@ body:not(.debug-mode) .debug-only{display:none}
     </select>
     <button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button>
   </div>
-  <button class="btn debug-only" id="lottery-result-window" onclick="openPredictionModal()">候補ウィンドウ</button>
-  <div class="result" id="lottery-result-area" aria-live="polite">SCANで候補を生成します。</div>
+  <div class="lottery-actions">
+    <button class="btn" id="lottery-result-window" onclick="openPredictionModal()" disabled>再表示</button>
+    <button class="btn" id="analysis-btn" onclick="inspectLotteryHistory(false)">データ解析</button>
+    <button class="btn" id="training-btn" onclick="inspectLotteryHistory(true)">ディープラーニング</button>
+  </div>
+  <p class="note" id="lottery-result-area" role="status">SCANで候補を生成します。</p>
 </section>
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
@@ -231,8 +248,26 @@ body:not(.debug-mode) .debug-only{display:none}
 <div class="voice-state debug-only" id="voice-status" role="status" aria-live="polite">マイクを有効にして「ロト6を3通り予測」のように話してください。</div>
 </section>
 </main>
-<!-- デバッグ時の候補表示ウィンドウ。 -->
-<div class="modal" id="prediction-modal" onclick="if(event.target===this)closePredictionModal()" role="dialog" aria-modal="true" aria-labelledby="prediction-modal-title"><div class="window"><div class="window-title"><span id="prediction-modal-title">予測候補</span><button class="btn" onclick="closePredictionModal()">× 閉じる</button></div><div class="window-body"><div class="note" id="modal-timestamp">未演算</div><div id="prediction-patterns"></div><div class="controls"><button class="btn orange" onclick="scanLottery()">↻ 再演算</button><button class="btn" onclick="closePredictionModal()">メイン画面へ戻る</button></div></div></div></div>
+<dialog class="modal" id="prediction-modal" aria-labelledby="prediction-modal-title">
+  <div class="window-title">
+    <span id="prediction-modal-title">予測候補</span>
+    <form method="dialog"><button class="btn" autofocus>閉じる</button></form>
+  </div>
+  <div class="window-body">
+    <div class="note" id="modal-timestamp"></div>
+    <div id="prediction-patterns"></div>
+    <div class="note warning" id="prediction-warning"></div>
+  </div>
+</dialog>
+<dialog class="modal" id="history-modal" aria-labelledby="history-modal-title">
+  <div class="window-title">
+    <span id="history-modal-title"></span>
+    <form method="dialog"><button class="btn" autofocus>閉じる</button></form>
+  </div>
+  <div class="window-body">
+    <pre class="report" id="history-report"></pre>
+  </div>
+</dialog>
 <!-- TRE-UI: 本サービスは統計・深層学習の研究・検証用途。 -->
 <div class="footer debug-only">TRE-Lottery AI Assistant / HARO-X3 / Statistical & Deep Learning Research</div>
 <script>
@@ -285,15 +320,15 @@ function updateHaroActivity(now=performance.now()){
 
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
 function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro-unit').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
-/** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
-function openPredictionModal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('prediction-modal').classList.add('open')}
-/** TRE-UI: モーダルを閉じ、メイン画面へ復帰。 */
-function closePredictionModal(){$('prediction-modal').classList.remove('open')}
+function openPredictionModal(){
+  const dialog=$('prediction-modal');
+  if(currentData&&!dialog.open)dialog.showModal();
+}
 const gamePronunciation={LOTO7:'ロトセブン',LOTO6:'ロトシックス',NUMBERS4:'ナンバーズフォー'};
+const historySources={MYSQL:'MySQL',BUNDLED_CSV:'同梱CSV',UPLOADED_CSV:'取込CSV',SYNTHETIC_DEMO:'架空データのデモ'};
 
 function renderPrediction(d){
   currentData=d;
-  const results=$('lottery-result-area');
   const patterns=d.candidates.map((c,i)=>{
     const row=document.createElement('div');
     row.className='pattern';
@@ -310,19 +345,13 @@ function renderPrediction(d){
     row.append(name,numbers);
     return row;
   });
-  const sources={MYSQL:'MySQL',BUNDLED_CSV:'同梱CSV',UPLOADED_CSV:'取込CSV',SYNTHETIC_DEMO:'架空データのデモ'};
-  const source=sources[d.mode]||d.mode;
-  const summary=document.createElement('strong');
-  summary.textContent=d.game+' '+d.candidates.length+'通り ｜ '+source
+  const source=historySources[d.mode]||d.mode;
+  const summary=d.game+' '+d.candidates.length+'通り ｜ '+source
     +(d.last_draw==null?'':' 第'+d.last_draw+'回まで');
-  const warning=document.createElement('div');
-  warning.className='note warning';
-  warning.textContent=d.warning;
-  results.replaceChildren(summary,...patterns,warning);
-  $('prediction-patterns').replaceChildren(...patterns.map(p=>p.cloneNode(true)));
-  $('prediction-modal-title').textContent=summary.textContent;
+  $('prediction-patterns').replaceChildren(...patterns);
+  $('prediction-modal-title').textContent=summary;
+  $('prediction-warning').textContent=d.warning;
   $('modal-timestamp').textContent=new Date(d.generated_at).toLocaleTimeString('ja-JP');
-  $('hist-val').textContent=d.mode==='SYNTHETIC_DEMO'?'DEMO':d.history_count+'回';
   $('mlp-val').textContent=d.training?'DONE':'N/A';
 
   const lines=['■ データ種別: '+source+' '+d.history_count+'回'];
@@ -331,7 +360,7 @@ function renderPrediction(d){
   lines.push('■ 候補生成: '+methods.join(' / '));
   if(d.debate)lines.push('■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース'));
   $('ai-verdict-details').textContent=[...lines,'',d.warning].join('\n');
-  addLog('orange','[ハロ] '+summary.textContent);
+  addLog('orange','[ハロ] '+d.game+'の予測が完了しました。');
 }
 
 async function scanLottery({readAll=false}={}){
@@ -339,27 +368,18 @@ async function scanLottery({readAll=false}={}){
   if(btn.disabled)return;
   const game=$('lottery-select').value.toUpperCase();
   const count=Number($('prediction-count').value);
-  const controls=[btn,$('lottery-select'),$('prediction-count')];
-  controls.forEach(control=>control.disabled=true);
-  onLotteryChange();
-  const cycle=voiceAssistant.readCycle;
-  setStatus('ANALYZING...',true);
-  $('api-val').textContent='BUSY';
+  setLotteryBusy(true);
+  const cycle=++voiceAssistant.readCycle;
   $('lottery-result-area').textContent=game+' の候補を'+count+'通り生成中…';
   const start=performance.now();
   try{
-    const response=await fetch('/api/predict',{
-      method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({game,count,samples:180,seed:Math.floor(Math.random()*1000000),
-        session:game==='LOTO7'?activeSession:null,judge:'rules'})
+    const data=await requestLottery('/api/predict',game,{
+      count,samples:180,seed:Math.floor(Math.random()*1000000),judge:'rules'
     });
-    const data=await response.json();
-    if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
     renderPrediction(data);
-    setStatus('ONLINE / '+(data.mode==='SYNTHETIC_DEMO'?'DEMO':data.mode),true);
-    $('api-val').textContent='READY';
-    $('ping-val').textContent=Math.round(performance.now()-start)+'ms';
-    if(document.body.classList.contains('debug-mode'))openPredictionModal();
+    updateLotteryTelemetry(data,start);
+    $('lottery-result-area').textContent='予測が完了しました。';
+    openPredictionModal();
   }catch(error){
     setStatus('API ERROR',false);
     $('api-val').textContent='ERROR';
@@ -370,7 +390,7 @@ async function scanLottery({readAll=false}={}){
     }
     return;
   }finally{
-    controls.forEach(control=>control.disabled=false);
+    setLotteryBusy(false);
   }
   if(!voiceAssistant.awake||!$('voice-output').checked||voiceAssistant.readCycle!==cycle)return;
   const data=currentData;
@@ -385,12 +405,78 @@ async function scanLottery({readAll=false}={}){
   }
 }
 
-function onLotteryChange(){
-  voiceAssistant.readCycle++;
-  currentData=null;
-  closePredictionModal();
-  $('lottery-result-area').textContent='SCANで候補を生成します。';
-  $('ai-verdict-details').textContent='SCANを実行すると、予測方法を表示します。';
+function setLotteryBusy(busy){
+  for(const id of ['scan-btn','analysis-btn','training-btn','lottery-select','prediction-count']){
+    $(id).disabled=busy;
+  }
+  $('lottery-result-window').disabled=busy||!currentData;
+  if(busy){
+    setStatus('ANALYZING...',true);
+    $('api-val').textContent='BUSY';
+  }
+}
+
+async function requestLottery(path,game,options={}){
+  const response=await fetch(path,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({game,session:game==='LOTO7'?activeSession:null,...options})
+  });
+  const data=await response.json();
+  if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
+  return data;
+}
+
+function updateLotteryTelemetry(data,start){
+  setStatus('ONLINE / '+(data.mode==='SYNTHETIC_DEMO'?'DEMO':data.mode),true);
+  $('api-val').textContent='READY';
+  $('hist-val').textContent=data.mode==='SYNTHETIC_DEMO'?'DEMO':data.history_count+'回';
+  $('ping-val').textContent=Math.round(performance.now()-start)+'ms';
+}
+
+async function inspectLotteryHistory(train){
+  if($('scan-btn').disabled)return;
+  const game=$('lottery-select').value.toUpperCase();
+  const title=game+' '+(train?'ディープラーニング':'データ解析');
+  const status=$('lottery-result-area');
+  const start=performance.now();
+  setLotteryBusy(true);
+  status.textContent=title+'を実行中…';
+  if(train)$('mlp-val').textContent='BUSY';
+  try{
+    const data=await requestLottery(train?'/api/train':'/api/analysis',game);
+    const source=historySources[data.mode]||data.mode;
+    const lines=[source+' ｜ '+data.history_count.toLocaleString('ja-JP')+'回',
+      '第'+data.first_draw+'回〜第'+data.last_draw+'回',''];
+    if(train){
+      const report=data.training;
+      lines.push('学習モデル  '+report.method,
+        '学習 '+report.training_samples+'件 ／ 検証 '+report.validation_samples+'件',
+        '採用エポック  '+report.epochs,
+        '検証BCE  '+report.validation_bce.toFixed(6),
+        '均等確率の基準BCE  '+report.random_baseline_bce.toFixed(6),
+        '', 'BCEは小さいほど検証データとの誤差が小さいことを示します。');
+      $('mlp-val').textContent='DONE';
+    }else{
+      lines.push('出現回数 上位5件');
+      data.frequencies.forEach((group,i)=>{
+        const label=game==='NUMBERS4'?i+1+'桁目':'本数字';
+        lines.push(label+'  '+group.map(([number,count])=>number+'（'+count+'回）').join('　'));
+      });
+    }
+    lines.push('','過去データによる検証です。当せん確率を保証するものではありません。');
+    $('history-modal-title').textContent=title;
+    $('history-report').textContent=lines.join('\n');
+    updateLotteryTelemetry(data,start);
+    status.textContent=title+'が完了しました。';
+    $('history-modal').showModal();
+  }catch(error){
+    setStatus('API ERROR',false);
+    $('api-val').textContent='ERROR';
+    if(train)$('mlp-val').textContent='ERROR';
+    status.textContent=title+'エラー: '+error.message;
+  }finally{
+    setLotteryBusy(false);
+  }
 }
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
 async function uploadCsv(){

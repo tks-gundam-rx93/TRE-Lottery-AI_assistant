@@ -1,9 +1,10 @@
 """NumPyによる小規模MLP（2隠れ層）。公開デモでも実際に学習を実行する。"""
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import numpy as np
 
+from .additional_games import GameCode, Loto6Draw, Numbers4Draw
 from .core import Draw, HistoryAnalyzer
 
 
@@ -57,13 +58,40 @@ class NumpyDeepForecaster:
                       for i in range(20, len(ordered))], dtype=np.float64)
         y = np.array([[float(n in ordered[i].numbers) for n in range(1, 38)]
                       for i in range(20, len(ordered))], dtype=np.float64)
+        return self._fit(x, y, 7 / 37)
+
+    def fit_additional(
+        self, game: GameCode, history: list[Loto6Draw] | list[Numbers4Draw],
+    ) -> NumpyTrainingReport:
+        """各桁または各本数字の直近20回の頻度から、次の抽せん結果を学習する。"""
+        ordered = sorted(history, key=lambda draw: draw.draw_no)
+        if len(ordered) < 80:
+            raise ValueError('深層学習には80回以上の履歴が必要です')
+
+        if game == "LOTO6":
+            draws = np.array([draw.numbers for draw in ordered])
+            labels = np.zeros((len(draws), 43))
+            labels[np.arange(len(draws))[:, None], draws - 1] = 1
+            baseline = 6 / 43
+        else:
+            digits = np.array([list(draw.winning_number) for draw in ordered], dtype=int)
+            labels = np.eye(10)[digits].reshape(len(ordered), 40)
+            baseline = 1 / 10
+
+        window = 20
+        sums = np.vstack([np.zeros(labels.shape[1]), labels.cumsum(axis=0)])
+        features = (sums[window:-1] - sums[:-window - 1]) / window
+        return self._fit(features, labels[window:], baseline)
+
+    def _fit(self, x: np.ndarray, y: np.ndarray, baseline_rate: float) -> NumpyTrainingReport:
+        input_size, output_size = x.shape[1], y.shape[1]
         cut = int(len(x) * .8)
         x_train, y_train, x_val, y_val = x[:cut], y[:cut], x[cut:], y[cut:]
         rng = np.random.default_rng(self.seed)
         self.params = {
-            'w1': rng.normal(0, np.sqrt(2 / 111), (111, 32)), 'b1': np.zeros(32),
+            'w1': rng.normal(0, np.sqrt(2 / input_size), (input_size, 32)), 'b1': np.zeros(32),
             'w2': rng.normal(0, np.sqrt(2 / 32), (32, 16)), 'b2': np.zeros(16),
-            'w3': rng.normal(0, np.sqrt(1 / 16), (16, 37)), 'b3': np.zeros(37),
+            'w3': rng.normal(0, np.sqrt(1 / 16), (16, output_size)), 'b3': np.zeros(output_size),
         }
         m = {k: np.zeros_like(v) for k, v in self.params.items()}
         v = {k: np.zeros_like(z) for k, z in self.params.items()}
@@ -74,7 +102,7 @@ class NumpyDeepForecaster:
         for epoch in range(1, self.epochs + 1):
             a, b, out = self._forward(x_train)
             # BCE微分; サンプル数とラベル数の両方で正規化。
-            dz3 = (out - y_train) / (len(x_train) * 37)
+            dz3 = (out - y_train) / y_train.size
             grad = {'w3': b.T @ dz3, 'b3': dz3.sum(axis=0)}
             db = dz3 @ self.params['w3'].T * (b > 0)
             grad['w2'] = a.T @ db
@@ -100,9 +128,9 @@ class NumpyDeepForecaster:
                 if stale >= 12:
                     break
         self.params = best
-        p = 7 / 37
+        p = baseline_rate
         baseline = -p * np.log(p) - (1 - p) * np.log(1 - p)
-        self.report = NumpyTrainingReport('numpy_mlp_111_32_16_37', len(x_train),
+        self.report = NumpyTrainingReport(f'numpy_mlp_{input_size}_32_16_{output_size}', len(x_train),
             len(x_val), best_epoch, round(best_loss, 6), round(float(baseline), 6),
             bool(best_loss < baseline))
         return self.report

@@ -3,7 +3,8 @@ import csv
 import io
 import random
 from fastapi.testclient import TestClient
-from app import app
+from app import app, service
+from lottery_ai.additional_games import AdditionalGameRepository, Loto6Draw, Numbers4Draw
 
 client = TestClient(app)
 
@@ -95,3 +96,50 @@ def test_additional_predictions_use_bundled_history_and_respect_game_format():
         else:
             assert all(0 <= digit <= upper for pick in picks for digit in pick)
             assert any(pick[0] == 0 for pick in picks)
+
+
+
+def test_analysis_and_training_use_selected_mysql_history(monkeypatch):
+    class Loto7Repository:
+        def all(self):
+            return service.demo[:80]
+
+    additional = {
+        'LOTO6': [Loto6Draw(i, (1, 2, 3, 4, 5, 6), 7) for i in range(2, 82)],
+        'NUMBERS4': [Numbers4Draw(i, '0079') for i in range(4, 84)],
+    }
+    monkeypatch.setattr(service, 'mysql', Loto7Repository())
+    monkeypatch.setattr(AdditionalGameRepository, 'all', lambda repo, game: additional[game])
+    for game, first, model_width in [('LOTO7', 1, 111), ('LOTO6', 2, 43), ('NUMBERS4', 4, 40)]:
+        request = {'game': game}
+        analyzed = client.post('/api/analysis', json=request)
+        assert analyzed.status_code == 200, analyzed.text
+        analysis = analyzed.json()
+        assert analysis['mode'] == 'MYSQL'
+        assert analysis['first_draw'] == first
+        assert analysis['last_draw'] == first + 79
+        assert len(analysis['frequencies']) == (4 if game == 'NUMBERS4' else 1)
+
+        trained = client.post('/api/train', json=request)
+        assert trained.status_code == 200, trained.text
+        result = trained.json()
+        assert result['mode'] == 'MYSQL'
+        assert result['history_count'] == 80
+        report = result['training']
+        assert report['method'].startswith(f'numpy_mlp_{model_width}_')
+        assert report['training_samples'] + report['validation_samples'] == 60
+        assert 0 < report['validation_bce'] < float('inf')
+
+    frequencies = client.post('/api/analysis', json={'game': 'NUMBERS4'}).json()['frequencies']
+    assert [group[0] for group in frequencies] == [['0', 80], ['0', 80], ['7', 80], ['9', 80]]
+
+
+def test_training_requires_enough_history(monkeypatch):
+    class ShortHistoryRepository:
+        def all(self):
+            return service.demo[:79]
+
+    monkeypatch.setattr(service, 'mysql', ShortHistoryRepository())
+    result = client.post('/api/train', json={'game': 'LOTO7'})
+    assert result.status_code == 409
+    assert '80回以上' in result.json()['detail']

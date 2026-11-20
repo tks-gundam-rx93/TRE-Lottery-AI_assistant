@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 import json
@@ -32,16 +33,20 @@ from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 from lottery_ai.cloud_import import Loto7HistoryImporter
 from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
 from lottery_ai.additional_games import (
-    AdditionalGameArchive, AdditionalGameRepository, GameCode, generate_candidates,
+    AdditionalGameArchive, AdditionalGameRepository, GameCode, Loto6Draw, Numbers4Draw,
+    generate_candidates,
 )
 
 
-class PredictRequest(BaseModel):
+class HistoryRequest(BaseModel):
     game: Literal["LOTO7", "LOTO6", "NUMBERS4"] = "LOTO7"
+    session: str | None = None
+
+
+class PredictRequest(HistoryRequest):
     count: int = Field(default=5, ge=1, le=10)
     samples: int = Field(default=180, ge=30, le=1000)
     seed: int = Field(default=42, ge=0, le=1_000_000)
-    session: str | None = None
     judge: str = Field(default='rules', pattern='^(rules|llm)$')
 
 
@@ -113,17 +118,46 @@ class PredictionService:
             return draws, 'MYSQL'
         return self.demo, 'SYNTHETIC_DEMO'
 
-    def predict_additional(self, game: GameCode, req: PredictRequest) -> dict[str, Any]:
-        history = []
-        source = 'MYSQL'
+    def additional_history(self, game: GameCode) -> tuple[list[Loto6Draw] | list[Numbers4Draw], str]:
         if self.mysql is not None:
             try:
-                history = AdditionalGameRepository(self.mysql).all(game)
+                draws = AdditionalGameRepository(self.mysql).all(game)
             except Exception as exc:
                 raise HTTPException(status_code=503, detail='クラウドMySQLから履歴を取得できません') from exc
-        if not history:
-            history = AdditionalGameArchive().load(game)
-            source = 'BUNDLED_CSV'
+            if draws:
+                return draws, 'MYSQL'
+        return AdditionalGameArchive().load(game), 'BUNDLED_CSV'
+
+    def inspect_history(self, req: HistoryRequest, *, train: bool) -> dict[str, Any]:
+        if req.game == 'LOTO7':
+            if self.mysql is None and not req.session:
+                history, source = CsvDrawLoader().load(Loto7HistoryBootstrap.FILE), 'BUNDLED_CSV'
+            else:
+                history, source = self.history(req.session)
+        else:
+            history, source = self.additional_history(req.game)
+        result = {
+            'game': req.game, 'mode': source, 'history_count': len(history),
+            'first_draw': history[0].draw_no, 'last_draw': history[-1].draw_no,
+        }
+        if train:
+            if len(history) < 80:
+                raise HTTPException(status_code=409, detail='ディープラーニングには80回以上の履歴が必要です')
+            model = NumpyDeepForecaster(epochs=45)
+            report = (model.fit(history) if req.game == 'LOTO7'
+                      else model.fit_additional(req.game, history))
+            return dict(result, training=asdict(report))
+
+        if req.game == 'NUMBERS4':
+            counts = [Counter(draw.winning_number[i] for draw in history) for i in range(4)]
+        else:
+            counts = [Counter(f'{number:02d}' for draw in history for number in draw.numbers)]
+        return dict(result, frequencies=[
+            counter.most_common(5) for counter in counts
+        ])
+
+    def predict_additional(self, game: GameCode, req: PredictRequest) -> dict[str, Any]:
+        history, source = self.additional_history(game)
         method = '本数字の出現頻度' if game == 'LOTO6' else '桁別の出現頻度（ストレート）'
         return {
             'game': game, 'mode': source, 'last_draw': history[-1].draw_no,
@@ -428,3 +462,13 @@ async def upload_csv(request: Request):
 @app.post('/api/predict')
 def predict(request: PredictRequest):
     return service.predict(request)
+
+
+@app.post('/api/analysis')
+def analyze_history(request: HistoryRequest):
+    return service.inspect_history(request, train=False)
+
+
+@app.post('/api/train')
+def train_on_history(request: HistoryRequest):
+    return service.inspect_history(request, train=True)

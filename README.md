@@ -103,13 +103,14 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv
 - 初回のみRenderの`LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES=1`を設定して取込。成功後は`0`に戻す。
 - `GET /api/history/status/LOTO6`、`GET /api/history/status/NUMBERS4`で履歴件数を確認可能。
 - **LOTO6・NUMBERS4の候補生成**は、MySQLに履歴があればその履歴を使い、メモリモードや対象テーブルが空の場合は同梱CSVを使用します。LOTO6は本数字の頻度、NUMBERS4は桁別の頻度で重み付けします。対応する購入形式はストレートです。
-- `POST /api/predict` の `game` に `LOTO7`、`LOTO6`、`NUMBERS4` を指定できます。既定は `LOTO7` です。深層学習と3AIによる投票はLOTO7で実行します。
+- `POST /api/predict` の `game` に `LOTO7`、`LOTO6`、`NUMBERS4` を指定できます。既定は `LOTO7` です。予測時に学習モデルと3AIによる投票を使うのはLOTO7です。
 
 ### 画面と音声操作
 
 - 「AIハロ起動」画面の最下部で「デバッグモード」を選べます。通常モードは3AI（ハロ）、SYSTEM TELEMETRY、TARGET LOTTERY、3-AI COMMS TERMINALを表示します。デバッグモードでは履歴のCSV取込、モデル評価、ハロと音声の調整も表示します。
-- TARGET LOTTERYでくじの種類と表示件数（1〜10通り）を選び、SCANを押すと候補が表示されます。
+- TARGET LOTTERYでくじの種類と表示件数（1〜10通り）を選び、SCANを押すと候補が専用ウィンドウに開きます。「再表示」で直近の候補を開き直せます。
 - 音声認識対応ブラウザではデバッグモードで起動し、3-AI COMMS TERMINALの「マイクON」から「ナンバーズ4を3通り予測」のように指示すると、ハロが認識した種類と件数、候補番号を読み上げます。チャット欄からは通常モードでも同じコマンドを使えます。
+- 「データ解析」と「ディープラーニング」は選択中のくじの履歴を使います。MySQLを設定した環境では登録済みの履歴を参照し、メモリモードでは同梱CSVを使います。LOTO7は取込済みのCSVセッションも使えます。解析では本数字または桁別の出現回数、学習では80回以上の履歴を使ったMLPの検証結果を表示します。学習は検証用の処理で、SCANの予測を上書きしません。
 - ハロの上部には、起動後の経過時間に占める各ハロの発話時間を円グラフで表示します。
 
 詳細：[docs/loto6_numbers4_import.md](docs/loto6_numbers4_import.md)
