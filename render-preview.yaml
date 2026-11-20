@@ -11,8 +11,23 @@ services:
     envVars:
       - key: LOTTERY_DB_BACKEND
         value: mysql
-      - key: LOTTERY_MYSQL_URL
+      - key: LOTTERY_DB_HOST
         fromService:
           type: web
           name: tre-lottery-ai-assistant
-          envVarKey: LOTTERY_MYSQL_URL
+          envVarKey: LOTTERY_DB_HOST
+      - key: LOTTERY_DB_PORT
+        fromService:
+          type: web
+          name: tre-lottery-ai-assistant
+          envVarKey: LOTTERY_DB_PORT
+      - key: LOTTERY_DB_USER
+        fromService:
+          type: web
+          name: tre-lottery-ai-assistant
+          envVarKey: LOTTERY_DB_USER
+      - key: LOTTERY_DB_PASSWORD
+        fromService:
+          type: web
+          name: tre-lottery-ai-assistant
+          envVarKey: LOTTERY_DB_PASSWORD
