@@ -86,7 +86,7 @@ class Loto7HistoryImporter:
             "new_rows": len(plan.new_draws),
             "inserted": inserted,
             "skipped": plan.skipped,
-            "db_rows": stats["count"] if dry_run else stats["count"] + inserted,
+            "db_rows": stats["count"],
             "first_draw_in_csv": min(d.draw_no for d in draws),
             "last_draw_in_csv": max(d.draw_no for d in draws),
         }
