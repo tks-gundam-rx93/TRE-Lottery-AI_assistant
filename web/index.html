@@ -25,11 +25,6 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 /* HARO MOBILE: PC/スマホともにサイズ比率と重なり方を共用。狭い画面ではステージ高さを可変にする。 */
 @media(max-width:500px){.stage{height:clamp(200px,62vw,260px)}.main{padding:10px}.lotto-ball{width:30px;height:30px;font-size:11px}.pattern .lotto-ball{width:29px;height:29px}.panel h2{font-size:10px}.controls .btn{padding:9px 7px}}
 
-.voice-panel .voice-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.voice-panel .voice-actions .btn{flex:1;min-width:110px}
-.voice-panel .voice-actions label{display:inline-flex;align-items:center;gap:5px;color:#d8eefe;font-size:11px}
-.voice-panel .voice-state{margin-top:9px;line-height:1.7;font-size:11px;color:#bde5fc}
-.voice-panel .voice-description{margin-top:7px;color:#95acc7;font-size:10px;line-height:1.65}
 .voice-tuning{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:11px;border-top:1px solid #1b526e;padding-top:10px}
 .voice-tuning label{display:grid;gap:5px;color:#adcae0;font-size:11px;min-width:115px;flex:1}
 .voice-tuning input[type=range]{width:100%;accent-color:var(--cyan)}
@@ -38,7 +33,7 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 .voice-tuning .btn{flex:0 0 auto}
 
 
-/* BOOT: ページ初回表示は起動ボタンだけ。ユーザー操作後にHUDを開放する。 */
+/* BOOT: 起動とモード選択。起動後に操作画面を表示する。 */
 body.boot-locked {overflow:hidden;}
 body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 #boot-screen{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center,#142f50 0%,#071522 48%,#02050c 100%);}
@@ -86,15 +81,22 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
  .haro-method-note{font-size:9px}
  .haro-scene .haro-speaking-indicator{font-size:9px}
 }
+.boot-mode{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));font-size:14px}
+body:not(.debug-mode) .debug-only{display:none}
+.voice-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.voice-state{margin-top:9px}
+#prediction-count{flex:0 0 auto;min-width:0}
+#lottery-result-area .pattern{width:100%}
 </style>
 </head>
 <body class="boot-locked">
-<!-- BOOT: 起動前に表示する唯一のUI。音声自動再生制約を避けるため、ボタン操作を起動契機とする。 -->
+<!-- 起動画面で表示モードを選択する。 -->
 <div id="boot-screen" role="region" aria-label="AIハロ起動画面">
   <button type="button" id="boot-launch" onclick="bootHaroSystem()">AIハロ起動</button>
+  <label class="boot-mode"><input type="checkbox" id="debug-mode"> デバッグモード</label>
 </div>
 <!-- TRE-UI: ステータスはAPI接続／解析状況に応じてJavaScriptから更新。 -->
-<header><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
+<header class="debug-only"><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
 <!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <!-- HARO VECTOR STAGE: 添付画像は設計資料のみ。キャラクターはすべて独立したインラインSVGで描画する。 -->
@@ -121,29 +123,56 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
     <button class="btn" type="button" onclick="selectHaro('green')">緑 / NEMESIS</button>
     <button class="btn orange" type="button" onclick="selectHaro('orange')">橙 / LOGOS</button>
     <button class="btn haro-purple-btn" type="button" onclick="selectHaro('purple')">紫 / CHAOS</button>
-    <button class="btn" type="button" id="haro-motion-test" onclick="previewHaroMotion()"
+    <button class="btn debug-only" type="button" id="haro-motion-test" onclick="previewHaroMotion()"
       aria-label="ハロGIFを約5秒間再生して待機状態へ戻す">耳・目の動作テスト</button>
     <!-- GIFはCSSの再生速度指定が使えないため、遅延時間を編集した2種類のGIFを選択する。 -->
-    <label class="haro-speed-label" for="haro-speed">耳の速度
+    <label class="haro-speed-label debug-only" for="haro-speed">耳の速度
       <select id="haro-speed" onchange="haroVisual.setPlaybackMode(this.value)">
         <option value="fast" selected>高速（開く速さ 約2倍）</option>
         <option value="normal">標準（元の速度）</option>
       </select>
     </label>
   </div>
-  <div class="haro-ear-state" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話時のみGIF再生）</div>
-  <div class="haro-method-note">方式1：発話者の選択はチャットへ反映。アニメーションは3体が同時に動くGIFです。</div>
+  <div class="haro-ear-state debug-only" id="haro-ear-state" role="status">IDLE / 耳 CLOSED（発話時のみGIF再生）</div>
+  <div class="haro-method-note debug-only">方式1：発話者の選択はチャットへ反映。アニメーションは3体が同時に動くGIFです。</div>
 </section>
 <!-- TRE-UI: 各機能の表示パネル。データ解析・判定の出力先を含む。 -->
 <main class="main">
 <!-- TRE-UI: 架空のCPU/GPU負荷は表示せず、API関連の実用状態を表示。 -->
 <section class="panel"><h2>SYSTEM TELEMETRY <small id="telemetry-clock">--:--:--</small></h2><div class="telemetry"><div class="meter"><label>API STATUS</label><strong id="api-val">—</strong><div class="bar"></div></div><div class="meter"><label>CSV HISTORY</label><strong id="hist-val">—</strong><div class="bar"></div></div><div class="meter"><label>MLP TRAIN</label><strong id="mlp-val">—</strong><div class="bar"></div></div><div class="meter"><label>API LATENCY</label><strong id="ping-val">—</strong><div class="bar"></div></div></div></section>
-<!-- TRE-UI: 予測対象と実行ボタン。現時点の予測機能はLOTO7のみ対応。 -->
-<section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（履歴DB対応・予測は準備中）</option><option value="numbers4">NUMBERS4（履歴DB対応・予測は準備中）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
+<section class="panel">
+  <h2>TARGET LOTTERY</h2>
+  <div class="controls">
+    <select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類">
+      <option value="loto7">LOTO7</option>
+      <option value="loto6">LOTO6</option>
+      <option value="numbers4">NUMBERS4</option>
+    </select>
+    <label for="prediction-count">表示件数</label>
+    <select id="prediction-count" onchange="onLotteryChange()">
+      <option value="1">1通り</option>
+      <option value="2">2通り</option>
+      <option value="3">3通り</option>
+      <option value="4">4通り</option>
+      <option value="5" selected>5通り</option>
+      <option value="6">6通り</option>
+      <option value="7">7通り</option>
+      <option value="8">8通り</option>
+      <option value="9">9通り</option>
+      <option value="10">10通り</option>
+    </select>
+    <button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button>
+    <button class="btn debug-only" onclick="openPredictionModal()">候補ウィンドウ</button>
+  </div>
+  <div class="result" id="lottery-result-area" aria-live="polite">SCANで候補を生成します。</div>
+</section>
 
-<!-- VOICE: ブラウザのマイク許可を得て「おーい、ハロ」を待ち受ける。 -->
-<section class="panel voice-panel" aria-labelledby="voice-heading">
-  <h2 id="voice-heading">HARO VOICE LINK <small>WAKE WORD / おーい、ハロ</small></h2>
+<!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
+<section class="panel debug-only"><h2>DRAW HISTORY / CSV IMPORT <small>3 GAMES / LOTO7 UPLOAD</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note" id="other-game-history-status" role="status">LOTO6 / NUMBERS4：履歴件数を確認中。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
+<!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
+<section class="panel debug-only"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
+<!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
+<section class="panel"><h2 id="active-agent-title">3-AI COMMS TERMINAL [MAIN: LOGOS]</h2><div class="chat-logs" id="chat-logs" aria-live="polite"><div class="msg orange">[LOGOS] 統計解析エンジンを待機中。SCANで予測を開始します。</div><div class="msg">[CHAOS] 候補多様性の分析準備ができています。</div><div class="msg green">[NEMESIS] 確率優位性を保証しない検証モードです。</div></div><div class="chat-input"><input id="chat-input" placeholder="例: ロト6を3通り予測 / 3AI判定" onkeydown="if(event.key==='Enter')sendChatMessage()" aria-label="操作コマンド"><button class="btn" onclick="sendChatMessage()">送信</button></div>
   <div class="voice-actions">
     <button class="btn orange" id="voice-mic-btn" onclick="voiceAssistant.toggle()" type="button">マイクON</button>
     <button class="btn" id="voice-wake-btn" onclick="voiceAssistant.wakeByTap()" type="button">ハロ起動（タップ）</button>
@@ -151,7 +180,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
     <label><input type="checkbox" id="voice-output" checked> 音声応答ON</label>
   </div>
   <!-- REFERENCE VOICE: ゲーム録画の音声特徴を参考にした独自合成音を調整する。 -->
-<div class="voice-tuning">
+<div class="voice-tuning debug-only">
   <label for="voice-pitch">声の高さ <output id="voice-pitch-label">1.50</output>
     <input type="range" id="voice-pitch" min="0.80" max="2.00" step="0.05" value="1.50"
       oninput="haroSpeech.updateSettings()">
@@ -165,25 +194,13 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
   </label>
   <button type="button" class="btn" onclick="haroSpeech.preview()">試聴</button>
 </div>
-<div class="voice-state" id="voice-status" role="status" aria-live="polite">マイクONを押して許可後、「おーい、ハロ」と呼びかけてください。</div>
-  <div class="voice-description">
-    起動時の第一声：「タカシ、元気か？」。発話中のハロだけ目と耳が動きます。
-    Chrome等の音声認識対応ブラウザ／HTTPSで動作。非対応時は「ハロ起動（タップ）」を使用してください。
-    音声認識はブラウザ機能を利用します（常時バックグラウンド待受は不可）。
-  </div>
+<div class="voice-state" id="voice-status" role="status" aria-live="polite">マイクを有効にして「ロト6を3通り予測」のように話してください。</div>
 </section>
-
-<!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
-<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>3 GAMES / LOTO7 UPLOAD</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note" id="other-game-history-status" role="status">LOTO6 / NUMBERS4：履歴件数を確認中。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
-<!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
-<section class="panel"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
-<!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
-<section class="panel"><h2 id="active-agent-title">3-AI COMMS TERMINAL [MAIN: LOGOS]</h2><div class="chat-logs" id="chat-logs" aria-live="polite"><div class="msg orange">[LOGOS] 統計解析エンジンを待機中。SCANで予測を開始します。</div><div class="msg">[CHAOS] 候補多様性の分析準備ができています。</div><div class="msg green">[NEMESIS] 確率優位性を保証しない検証モードです。</div></div><div class="chat-input"><input id="chat-input" placeholder="例: ロト7を5通り予測 / 3AI判定" onkeydown="if(event.key==='Enter')sendChatMessage()" aria-label="操作コマンド"><button class="btn" onclick="sendChatMessage()">送信</button></div></section>
 </main>
-<!-- TRE-UI: 5通りの予測番号を表示するダイアログ。 -->
-<div class="modal" id="loto7-modal" onclick="if(event.target===this)closeLoto7Modal()" role="dialog" aria-modal="true" aria-label="ロト7の候補5通り"><div class="window"><div class="window-title"><span>◆ LOTO7 予測演算ウィンドウ [5 PATTERNS]</span><button class="btn" onclick="closeLoto7Modal()">× 閉じる</button></div><div class="window-body"><div class="note" id="modal-timestamp">未演算</div><div id="loto7-5patterns-container"></div><div class="legend">01-05 白 ・06-10 黄 ・11-15 緑 ・16-20 赤 ・21-25 青 ・26-30 桃 ・31-37 紫</div><div class="controls"><button class="btn orange" onclick="scanLottery()">↻ 再演算</button><button class="btn" onclick="closeLoto7Modal()">メイン画面へ戻る</button></div></div></div></div>
+<!-- デバッグ時の候補表示ウィンドウ。 -->
+<div class="modal" id="prediction-modal" onclick="if(event.target===this)closePredictionModal()" role="dialog" aria-modal="true" aria-labelledby="prediction-modal-title"><div class="window"><div class="window-title"><span id="prediction-modal-title">予測候補</span><button class="btn" onclick="closePredictionModal()">× 閉じる</button></div><div class="window-body"><div class="note" id="modal-timestamp">未演算</div><div id="prediction-patterns"></div><div class="controls"><button class="btn orange" onclick="scanLottery()">↻ 再演算</button><button class="btn" onclick="closePredictionModal()">メイン画面へ戻る</button></div></div></div></div>
 <!-- TRE-UI: 本サービスは統計・深層学習の研究・検証用途。 -->
-<div class="footer">TRE-Lottery AI Assistant / HARO-X3 / Statistical & Deep Learning Research</div>
+<div class="footer debug-only">TRE-Lottery AI Assistant / HARO-X3 / Statistical & Deep Learning Research</div>
 <script>
 /** TRE-UI: 厳格モードで暗黙のグローバル変数生成を防止。 */
 'use strict';
@@ -205,21 +222,129 @@ function addLog(who,text){const el=document.createElement('div');el.className='m
 /** TRE-UI: 1～37の数字を5数字単位のボール色へ分類。 */
 function getBallClass(n){return ['ball-white','ball-yellow','ball-green','ball-red','ball-blue','ball-pink','ball-purple'][Math.min(6,Math.floor((n-1)/5))]}
 /** TRE-UI: 番号に対応した色とゼロ埋め2桁表示のDOMを生成。 */
-function ball(n){const el=document.createElement('span');el.className='lotto-ball '+getBallClass(n);el.textContent=String(n).padStart(2,'0');return el}
+function ball(n, game){
+  const el=document.createElement('span');
+  el.className='lotto-ball '+getBallClass(Math.max(1,n));
+  el.textContent=String(n).padStart(game==='NUMBERS4'?1:2,'0');
+  return el;
+}
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
 const agentNames={orange:'LOGOS',purple:'CHAOS',green:'NEMESIS'};
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
 function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro-unit').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
 /** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
-function openLoto7Modal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('loto7-modal').classList.add('open')}
+function openPredictionModal(){if(!currentData){addLog('orange','SCANを実行してから候補を表示してください。');return;}$('prediction-modal').classList.add('open')}
 /** TRE-UI: モーダルを閉じ、メイン画面へ復帰。 */
-function closeLoto7Modal(){$('loto7-modal').classList.remove('open')}
-/** TRE-UI: APIレスポンスから候補番号・抽出法・投票数・モデル評価・3AI再判定を描画。 */
-function renderPrediction(d){currentData=d;const modal=$('loto7-5patterns-container');const bar=$('lottery-result-area');modal.replaceChildren();bar.replaceChildren();d.candidates.forEach((c,i)=>{const row=document.createElement('div');row.className='pattern';const name=document.createElement('strong');name.textContent='SET-'+String(i+1).padStart(2,'0');const balls=document.createElement('div');balls.className='ballbox';c.numbers.forEach(n=>balls.appendChild(ball(n)));const hint=document.createElement('small');hint.textContent=c.method+' / '+c.votes+'票';row.append(name,balls,hint);modal.appendChild(row)});if(d.candidates.length){const label=document.createElement('span');label.textContent='SET-01: ';label.style.color='var(--orange)';bar.appendChild(label);d.candidates[0].numbers.forEach(n=>bar.appendChild(ball(n)))}const demo=d.mode==='SYNTHETIC_DEMO';const mode=document.createElement('span');mode.textContent=demo?' [架空データのデモ]':' [CSV第'+d.last_draw+'回まで]';mode.style.color=demo?'#ffc078':'#00ffcc';bar.appendChild(mode);$('hist-val').textContent=demo?'DEMO':d.history_count+'回';$('mlp-val').textContent=d.training?'DONE':'N/A';$('modal-timestamp').textContent=(demo?'DEMO':'CSV')+' / '+new Date(d.generated_at).toLocaleTimeString('ja-JP');const lines=['■ データ種別: '+(demo?'架空160回（動作テスト）':'ユーザーCSV '+d.history_count+'回'),'■ 深層学習: '+(d.training?d.training.method+' 検証BCE='+d.training.validation_bce+' / ランダム基準BCE='+d.training.random_baseline_bce:'履歴不足'),'■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース（LLMではありません）'),''];for(const v of d.debate.first_round)lines.push('独立判定 '+v.agent+': '+v.candidate_id+' / '+v.reason);lines.push('');for(const v of d.debate.second_round)lines.push('反論・再判定 '+v.agent+': '+v.candidate_id+' / '+v.critique);lines.push('','最終支持: '+d.debate.winner_id,'',d.warning);$('ai-verdict-details').textContent=lines.join('\n');addLog('orange','[3AI] '+(demo?'架空履歴を使用したデモ。':'ユーザーCSVを使用。')+'予測候補を検証しました。');for(const v of d.debate.second_round)addLog(v.agent==='LOGOS'?'orange':v.agent==='NEMESIS'?'green':'blue','['+v.agent+'] '+v.candidate_id+'を支持: '+v.reason)}
-/** TRE-UI: POST /api/predictで5通りを生成。通信中の二重実行を防ぎ、失敗時はエラー表示。 */
-async function scanLottery(){const game=$('lottery-select').value;if(game!=='loto7'){$('lottery-result-area').textContent=game==='none'?'抽せん種別を選択してください。':'現在はLOTO7のみ実装済みです。';return}const btn=$('scan-btn');btn.disabled=true;setStatus('ANALYZING...',true);$('lottery-result-area').textContent='統計解析・MLP学習・3AI判定中...';const start=performance.now();try{const response=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:5,samples:180,seed:Math.floor(Math.random()*1000000),session:activeSession,judge:'rules'})});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);renderPrediction(d);setStatus(d.mode==='SYNTHETIC_DEMO'?'ONLINE / DEMO':'ONLINE / CSV',true);$('ping-val').textContent=Math.round(performance.now()-start)+'ms';openLoto7Modal();if(voiceAssistant.awake&&d.candidates.length){const top=d.candidates[0].numbers.map(String).join('、');haroSpeech.say('ロトセブン、予測完了だぞ！ 第1候補は、'+top+'。ハロ！',currentHaro)}}catch(e){setStatus('API ERROR',false);$('lottery-result-area').textContent='予測エラー: '+e.message;addLog('green','[ERROR] '+e.message)}finally{btn.disabled=false}}
-/** TRE-UI: くじ種別変更時の案内を更新。LOTO6とNUMBERS4は未実装。 */
-function onLotteryChange(){$('lottery-result-area').textContent=$('lottery-select').value==='loto7'?'LOTO7を選択中。SCANで予測します。':'現在はLOTO7のみ実装済みです。'}
+function closePredictionModal(){$('prediction-modal').classList.remove('open')}
+const gamePronunciation={LOTO7:'ロトセブン',LOTO6:'ロトシックス',NUMBERS4:'ナンバーズフォー'};
+
+function renderPrediction(d){
+  currentData=d;
+  const results=$('lottery-result-area');
+  const patterns=d.candidates.map((c,i)=>{
+    const row=document.createElement('div');
+    row.className='pattern';
+    const name=document.createElement('strong');
+    name.textContent='SET-'+String(i+1).padStart(2,'0');
+    const balls=document.createElement('div');
+    balls.className='ballbox';
+    balls.setAttribute('aria-label',d.game==='NUMBERS4'?c.numbers.join(''):c.numbers.join('、'));
+    c.numbers.forEach(n=>balls.appendChild(ball(n,d.game)));
+    const hint=document.createElement('small');
+    hint.textContent=c.method+(c.votes==null?'':' / '+c.votes+'票');
+    row.append(name,balls,hint);
+    return row;
+  });
+  const sources={MYSQL:'MySQL',BUNDLED_CSV:'同梱CSV',UPLOADED_CSV:'取込CSV',SYNTHETIC_DEMO:'架空データのデモ'};
+  const source=sources[d.mode]||d.mode;
+  const summary=document.createElement('strong');
+  summary.textContent=d.game+' '+d.candidates.length+'通り ｜ '+source
+    +(d.last_draw==null?'':' 第'+d.last_draw+'回まで');
+  const warning=document.createElement('div');
+  warning.className='note warning';
+  warning.textContent=d.warning;
+  results.replaceChildren(summary,...patterns,warning);
+  $('prediction-patterns').replaceChildren(...patterns.map(p=>p.cloneNode(true)));
+  $('prediction-modal-title').textContent=summary.textContent;
+  $('modal-timestamp').textContent=new Date(d.generated_at).toLocaleTimeString('ja-JP');
+  $('hist-val').textContent=d.mode==='SYNTHETIC_DEMO'?'DEMO':d.history_count+'回';
+  $('mlp-val').textContent=d.training?'DONE':'N/A';
+
+  const lines=['■ データ種別: '+source+' '+d.history_count+'回'];
+  if(d.training)lines.push('■ 深層学習: '+d.training.method+' 検証BCE='+d.training.validation_bce+' / ランダム基準BCE='+d.training.random_baseline_bce);
+  if(d.debate){
+    lines.push('■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース'),'');
+    for(const v of d.debate.first_round)lines.push('独立判定 '+v.agent+': '+v.candidate_id+' / '+v.reason);
+    for(const v of d.debate.second_round){
+      lines.push('反論・再判定 '+v.agent+': '+v.candidate_id+' / '+v.critique);
+      addLog(v.agent==='LOGOS'?'orange':v.agent==='NEMESIS'?'green':'blue','['+v.agent+'] '+v.candidate_id+'を支持: '+v.reason);
+    }
+    lines.push('最終支持: '+d.debate.winner_id);
+  }else{
+    lines.push('■ 候補生成: '+d.candidates[0].method);
+  }
+  $('ai-verdict-details').textContent=[...lines,'',d.warning].join('\n');
+  addLog('orange','[ハロ] '+summary.textContent);
+}
+
+async function scanLottery({readAll=false}={}){
+  const btn=$('scan-btn');
+  if(btn.disabled)return;
+  const game=$('lottery-select').value.toUpperCase();
+  const count=Number($('prediction-count').value);
+  const controls=[btn,$('lottery-select'),$('prediction-count')];
+  controls.forEach(control=>control.disabled=true);
+  onLotteryChange();
+  const cycle=voiceAssistant.readCycle;
+  setStatus('ANALYZING...',true);
+  $('api-val').textContent='BUSY';
+  $('lottery-result-area').textContent=game+' の候補を'+count+'通り生成中…';
+  const start=performance.now();
+  try{
+    const response=await fetch('/api/predict',{
+      method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({game,count,samples:180,seed:Math.floor(Math.random()*1000000),
+        session:game==='LOTO7'?activeSession:null,judge:'rules'})
+    });
+    const data=await response.json();
+    if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
+    renderPrediction(data);
+    setStatus('ONLINE / '+(data.mode==='SYNTHETIC_DEMO'?'DEMO':data.mode),true);
+    $('api-val').textContent='READY';
+    $('ping-val').textContent=Math.round(performance.now()-start)+'ms';
+    if(document.body.classList.contains('debug-mode'))openPredictionModal();
+  }catch(error){
+    setStatus('API ERROR',false);
+    $('api-val').textContent='ERROR';
+    $('lottery-result-area').textContent='予測エラー: '+error.message;
+    addLog('green','[ERROR] '+error.message);
+    if(voiceAssistant.awake&&voiceAssistant.readCycle===cycle){
+      await haroSpeech.say('予測を実行できなかったぞ。画面のエラーを確認してくれよな。',currentHaro);
+    }
+    return;
+  }finally{
+    controls.forEach(control=>control.disabled=false);
+  }
+  if(!voiceAssistant.awake||!$('voice-output').checked||voiceAssistant.readCycle!==cycle)return;
+  const data=currentData;
+  const speaker=currentHaro;
+  const name=gamePronunciation[data.game];
+  const candidates=readAll?data.candidates:data.candidates.slice(0,1);
+  for(const [index,candidate] of candidates.entries()){
+    if(voiceAssistant.readCycle!==cycle)break;
+    const intro=index===0?name+'、'+data.candidates.length+'通りの候補を表示したぞ。':'';
+    const digits=candidate.numbers.map(n=>data.game==='NUMBERS4'&&n===0?'ゼロ':String(n));
+    await haroSpeech.say(intro+'第'+(index+1)+'候補は、'+digits.join('、')+'。',speaker);
+  }
+}
+
+function onLotteryChange(){
+  voiceAssistant.readCycle++;
+  currentData=null;
+  closePredictionModal();
+  $('lottery-result-area').textContent='SCANで候補を生成します。';
+  $('ai-verdict-details').textContent='SCANを実行すると、予測方法を表示します。';
+}
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
 async function uploadCsv(){
   const input=$('csv-input'),status=$('csv-status');
@@ -637,14 +762,14 @@ class HaroVoiceAssistant {
   toggle(){
     if(this.enabled){this.disable();return}
     if(!this.Recognition){
-      this.setState('音声認識に非対応です。Chromeで開くか「ハロ起動（タップ）」を押してください。');
+      this.setState('音声認識に非対応です。Chromeで開くか、チャット入力を使ってください。');
       return;
     }
     this.enabled=true;
     // 起動済みのAIはマイクON/OFF後も起動状態を維持する。
     this.paused=false;
     this._updateButton();
-    this.setState('待機中。マイクを許可し、「おーい、ハロ」と呼びかけてください。');
+    this.setState('マイクを許可すると音声指示を使えます。');
     this.startListening();
   }
   disable(){
@@ -655,7 +780,7 @@ class HaroVoiceAssistant {
     if(this.recognition){try{this.recognition.abort()}catch(e){}}
     this.listening=false;
     this._updateButton();
-    this.setState('マイクOFF。ハロ起動（タップ）でも応答できます。');
+    this.setState('マイクOFF。チャット入力でも操作できます。');
   }
   startListening(){
     if(!this.enabled||this.paused||this.processing||this.listening||haroSpeech.speaking)return;
@@ -717,15 +842,7 @@ class HaroVoiceAssistant {
   }
   async _process(text){
     addLog('user','[音声] '+text);
-    if(this.isWakeWord(text)){
-      if(!this.awake){
-        await this.wake();
-      }else{
-        await haroSpeech.say('ハロ！聞こえてるぞ！','orange');
-      }
-      return;
-    }
-    if(!this.awake){
+    if(!this.awake&&!this.isWakeWord(text)){
       this.setState('起動前です。「おーい、ハロ」と呼びかけてください。');
       return;
     }
@@ -757,25 +874,52 @@ class HaroVoiceAssistant {
   }
 }
 
-/**
- * チャット入力・音声認識から共通で呼ばれるコマンドルータ。
- * 自然言語の対象はロト7予測・3AI判定読み上げ・CSV操作ガイドに限定。
- */
+/** チャット入力と音声認識で同じ操作コマンドを使う。 */
 async function dispatchHaroCommand(text){
-  if(voiceAssistant.isWakeWord(text)){
-    await voiceAssistant.wake();
-  }else if(/停止|止めて|ストップ|静かに/.test(text)){
+  const wasAwake=voiceAssistant.awake;
+  const command=text.normalize('NFKC');
+  const loto7=/ロト\s*(?:7|七|セブン)|LOTO\s*7/i;
+  const loto6=/ロト\s*(?:6|六|シックス)|LOTO\s*6/i;
+  const numbers4=/ナンバーズ\s*(?:4|四|フォー)|NUMBERS\s*4/i;
+  const games=[['loto7',loto7],['loto6',loto6],['numbers4',numbers4]]
+    .filter(([,pattern])=>pattern.test(command));
+  const quantity=command.match(/([+−-]?\d+(?:[.,]\d+)*|[〇零一二三四五六七八九十百千万]+)\s*(?:通り|とおり|パターン|口)/);
+  const reply=async message=>{
+    addLog('orange','[ハロ] '+message);
+    if(voiceAssistant.awake)await haroSpeech.say(message,currentHaro);
+  };
+  if(voiceAssistant.isWakeWord(command)&&!voiceAssistant.awake)await voiceAssistant.wake();
+  if(/停止|止めて|ストップ|静かに/.test(command)){
     voiceAssistant.stopSpeech();
-  }else if(/3AI|3エーアイ|判定|討論|議論|読み上げ/.test(text)){
+  }else if(/予測|予想|SCAN/i.test(command)||quantity||games.length&&!/3AI|3エーアイ|判定|討論|議論|読み上げ/i.test(command)){
+    if($('scan-btn').disabled){
+      await reply('予測中だぞ。完了してからもう一度頼んでくれよな。');
+      return;
+    }
+    if(games.length>1){
+      await reply('宝くじは1種類ずつ指定してくれよな。');
+      return;
+    }
+    if(quantity){
+      const value=quantity[1];
+      const kanji='〇一二三四五六七八九十';
+      const count=kanji.includes(value)&&value.length===1?kanji.indexOf(value):Number(value);
+      if(!Number.isInteger(count)||count<1||count>10){
+        await reply('表示件数は1通りから10通りで指定してくれよな。');
+        return;
+      }
+      $('prediction-count').value=String(count);
+    }
+    if(games.length)$('lottery-select').value=games[0][0];
+    await scanLottery({readAll:true});
+  }else if(/3AI|3エーアイ|判定|討論|議論|読み上げ/i.test(command)){
     await readDebateAloud();
-  }else if(/ロト7|LOTO7|予測|予想|5通り|SCAN/i.test(text)){
-    await scanLottery();
-  }else if(/CSV|データ|取り込み/.test(text)){
-    addLog('green','[ハロ] CSVは取込欄から選ぶんだぞ。');
-    if(voiceAssistant.awake)await haroSpeech.say('CSVは取込欄から選ぶんだぞ。','green');
+  }else if(/CSV|データ|取り込み/.test(command)){
+    await reply('ロト7のCSVはデバッグモードの取込欄から選ぶんだぞ。');
+  }else if(voiceAssistant.isWakeWord(command)){
+    if(wasAwake)await reply('ハロ！聞こえてるぞ！');
   }else{
-    addLog('orange','[ハロ] ロト7の予測か、3AI判定って言ってくれよな！');
-    if(voiceAssistant.awake)await haroSpeech.say('ロト7の予測か、3AI判定って言ってくれよな！','orange');
+    await reply('「ロト6を3通り予測」や「3AI判定」と言ってくれよな！');
   }
 }
 
@@ -788,6 +932,12 @@ async function readDebateAloud(){
   }
   if(!voiceAssistant.awake){
     addLog('orange','音声を使うときは「おーい、ハロ」で起動してください。');
+    return;
+  }
+  if(!currentData.debate){
+    const message=gamePronunciation[currentData.game]+'の候補は出現頻度を使って生成したぞ。3AI判定はロトセブンで使えるぞ。';
+    addLog('orange','[ハロ] '+message);
+    await haroSpeech.say(message,'orange');
     return;
   }
   const haroByAgent={LOGOS:'orange',CHAOS:'purple',NEMESIS:'green'};
@@ -808,12 +958,11 @@ voiceAssistant.readCycle=0;
 /**
  * LOTO6とNUMBERS4の実履歴件数をクラウドDBから確認する。
  * 抽せん日の列が元CSVにない場合はNULLとして保存している。
- * この2種の予測機能は未実装のため、予測成功を装わない。
  */
 async function refreshAdditionalHistoryStatus(){
   const target=$('other-game-history-status');
   if(dbBackend!=='mysql'){
-    target.textContent='LOTO6 / NUMBERS4：クラウドMySQL未接続';
+    target.textContent='LOTO6 / NUMBERS4：同梱CSVを使用します。';
     return;
   }
   try{
@@ -826,7 +975,7 @@ async function refreshAdditionalHistoryStatus(){
     target.textContent=results.map((item,i)=>
       games[i]+' '+item.draw_count+'件（第'+(item.first_draw??'—')+
       '～'+(item.last_draw??'—')+'回）'
-    ).join(' / ')+' ｜両種の予測は準備中';
+    ).join(' / ');
   }catch(error){
     target.textContent='LOTO6 / NUMBERS4：履歴照会できません（'+error.message+'）';
   }
@@ -879,6 +1028,7 @@ function bootHaroSystem(){
   haroSpeech.restoreSettings();
   haroSpeech.armAudio();
   systemBooted=true;
+  document.body.classList.toggle('debug-mode',$('debug-mode').checked);
   document.body.classList.remove('boot-locked');
   $('boot-screen').classList.add('boot-finished');
   $('boot-screen').setAttribute('aria-hidden','true');

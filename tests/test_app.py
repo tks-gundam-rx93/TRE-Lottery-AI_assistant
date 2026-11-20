@@ -76,3 +76,22 @@ def test_gif_haro_interface_and_assets_served():
     assert idle.status_code == 200
     assert idle.content[:4] == b"RIFF"
     assert idle.content[8:12] == b"WEBP"
+
+
+def test_additional_predictions_use_bundled_history_and_respect_game_format():
+    for game, size, upper in [('LOTO6', 6, 43), ('NUMBERS4', 4, 9)]:
+        response = client.post('/api/predict', json={'game': game, 'count': 10})
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result['game'] == game
+        assert result['mode'] == 'BUNDLED_CSV'
+        assert result['debate'] is None
+        picks = [tuple(item['numbers']) for item in result['candidates']]
+        assert len(picks) == len(set(picks)) == 10
+        assert all(len(pick) == size for pick in picks)
+        if game == 'LOTO6':
+            assert all(1 <= pick[0] and pick[-1] <= upper for pick in picks)
+            assert all(pick == tuple(sorted(set(pick))) for pick in picks)
+        else:
+            assert all(0 <= digit <= upper for pick in picks for digit in pick)
+            assert any(pick[0] == 0 for pick in picks)

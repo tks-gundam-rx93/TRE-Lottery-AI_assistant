@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -14,6 +15,7 @@ import csv
 import gzip
 import io
 import json
+import random
 import re
 from typing import Literal
 
@@ -113,6 +115,37 @@ class AdditionalGameArchive:
         return items
 
 
+def generate_candidates(
+    game: GameCode, draws: list[Loto6Draw] | list[Numbers4Draw], count: int, seed: int,
+) -> list[tuple[int, ...]]:
+    """過去の出現頻度で重み付けし、異なる組み合わせを生成する。"""
+    rng = random.Random(seed)
+    if game == "LOTO6":
+        frequencies = Counter(n for draw in draws for n in draw.numbers)
+    else:
+        positions = [
+            [1 + sum(int(draw.winning_number[i]) == digit for draw in draws)
+             for digit in range(10)]
+            for i in range(4)
+        ]
+
+    unique: dict[tuple[int, ...], None] = {}
+    while len(unique) < count:
+        if game == "LOTO6":
+            pool = list(range(1, 44))
+            weights = [frequencies[n] + 1 for n in pool]
+            selected = []
+            for _ in range(6):
+                index = rng.choices(range(len(pool)), weights)[0]
+                selected.append(pool.pop(index))
+                weights.pop(index)
+            candidate = tuple(sorted(selected))
+        else:
+            candidate = tuple(rng.choices(range(10), weights)[0] for weights in positions)
+        unique[candidate] = None
+    return list(unique)
+
+
 class AdditionalGameRepository:
     """ゲーム別テーブルへの原子的な初回登録と重複防止を担当する。"""
 
@@ -153,6 +186,26 @@ class AdditionalGameRepository:
                 cursor.execute(self.CREATE_LOTO6)
                 cursor.execute(self.CREATE_NUMBERS4)
             conn.commit()
+        finally:
+            conn.close()
+
+    def all(self, game: GameCode) -> list[Loto6Draw] | list[Numbers4Draw]:
+        self.validate_game(game)
+        self._ensure_schema()
+        conn = self.mysql._connect()
+        try:
+            with conn.cursor() as cursor:
+                if game == "LOTO6":
+                    cursor.execute(
+                        "SELECT draw_no, numbers_json, bonus_number "
+                        "FROM loto6_draw_results ORDER BY draw_no"
+                    )
+                    return [Loto6Draw(no, tuple(json.loads(numbers)), bonus)
+                            for no, numbers, bonus in cursor.fetchall()]
+                cursor.execute(
+                    "SELECT draw_no, winning_number FROM numbers4_draw_results ORDER BY draw_no"
+                )
+                return [Numbers4Draw(no, number) for no, number in cursor.fetchall()]
         finally:
             conn.close()
 

@@ -17,7 +17,7 @@ import tempfile
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -31,10 +31,13 @@ from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 from lottery_ai.cloud_import import Loto7HistoryImporter
 from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
-from lottery_ai.additional_games import AdditionalGameArchive, AdditionalGameRepository
+from lottery_ai.additional_games import (
+    AdditionalGameArchive, AdditionalGameRepository, GameCode, generate_candidates,
+)
 
 
 class PredictRequest(BaseModel):
+    game: Literal["LOTO7", "LOTO6", "NUMBERS4"] = "LOTO7"
     count: int = Field(default=5, ge=1, le=10)
     samples: int = Field(default=180, ge=30, le=1000)
     seed: int = Field(default=42, ge=0, le=1_000_000)
@@ -110,7 +113,33 @@ class PredictionService:
             return draws, 'MYSQL'
         return self.demo, 'SYNTHETIC_DEMO'
 
+    def predict_additional(self, game: GameCode, req: PredictRequest) -> dict[str, Any]:
+        history = []
+        source = 'MYSQL'
+        if self.mysql is not None:
+            try:
+                history = AdditionalGameRepository(self.mysql).all(game)
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail='クラウドMySQLから履歴を取得できません') from exc
+        if not history:
+            history = AdditionalGameArchive().load(game)
+            source = 'BUNDLED_CSV'
+        method = '本数字の出現頻度' if game == 'LOTO6' else '桁別の出現頻度（ストレート）'
+        return {
+            'game': game, 'mode': source, 'last_draw': history[-1].draw_no,
+            'target_draw': history[-1].draw_no + 1, 'history_count': len(history),
+            'generated_at': datetime.now(timezone.utc).isoformat(),
+            'candidates': [
+                {'candidate_id': f'SET-{i:02d}', 'numbers': numbers, 'method': method}
+                for i, numbers in enumerate(generate_candidates(game, history, req.count, req.seed), 1)
+            ],
+            'training': None, 'debate': None,
+            'warning': '候補は過去の出現頻度に基づきます。公平な抽せんでは各組み合わせの確率は等しくなります。',
+        }
+
     def predict(self, req: PredictRequest) -> dict[str, Any]:
+        if req.game != "LOTO7":
+            return self.predict_additional(req.game, req)
         history, source = self.history(req.session)
         analyzer = HistoryAnalyzer(history)
         strategies = [FrequencyStrategy(), GapPairStrategy(), MonteCarloStrategy()]
@@ -319,7 +348,8 @@ def additional_history_status(game: str):
     if game not in ("LOTO6", "NUMBERS4"):
         raise HTTPException(status_code=404, detail="未対応の宝くじ種類です")
     if service.mysql is None:
-        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0}
+        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0,
+                'prediction_available': True}
     try:
         stats = AdditionalGameRepository(service.mysql).stats(game)
     except Exception as exc:
@@ -333,7 +363,7 @@ def additional_history_status(game: str):
         'last_draw': stats['last_draw'],
         'missing_count': stats['missing_count'],
         'dates_available': stats['dates_available'],
-        'prediction_available': False,
+        'prediction_available': True,
     }
 
 
