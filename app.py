@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import json
 import os
+import hmac
 from pathlib import Path
 import random
 import tempfile
@@ -96,9 +97,13 @@ class PredictionService:
                     status_code=503,
                     detail='MySQLに接続できません。XAMPPのMySQL起動と環境変数を確認してください'
                 ) from exc
-            if len(draws) >= 20:
-                return draws, 'MYSQL'
-            # 空DBには架空の抽せん結果を保存しない。
+            if len(draws) < 20:
+                # 本番MySQLモードで架空の結果を混在させない。
+                raise HTTPException(
+                    status_code=409,
+                    detail=f'ロト7履歴が{len(draws)}件です。20回以上の実データCSVをDBに取り込んでください'
+                )
+            return draws, 'MYSQL'
         return self.demo, 'SYNTHETIC_DEMO'
 
     def predict(self, req: PredictRequest) -> dict[str, Any]:
@@ -168,27 +173,64 @@ def home():
 
 @app.get('/api/health')
 def health():
-    # DBが未起動でもAPIプロセスを止めず、UIに接続状態を返す。
+    """MySQLの実接続状態と保存済み回号を公開。接続情報や秘密は返さない。"""
     db_state = 'disabled'
-    rows = 0
+    summary = {'count': 0, 'first_draw': None, 'last_draw': None, 'last_date': None, 'missing_count': 0}
     if service.mysql is not None:
         try:
-            rows = len(service.mysql.all())
+            summary = service.mysql.stats() if hasattr(service.mysql, 'stats') else dict(
+                count=len(service.mysql.all()), first_draw=None, last_draw=None,
+                last_date=None, missing_count=0)
             db_state = 'connected'
         except Exception:
             db_state = 'unavailable'
-    return {'status': 'ok', 'game': 'LOTO7',
-            'history_mode': 'MYSQL' if db_state == 'connected' and rows >= 20 else 'SYNTHETIC_DEMO',
+    history_mode = ('MYSQL' if db_state == 'connected' and summary['count'] >= 20
+                    else 'MYSQL_WAITING' if service.mysql is not None else 'SYNTHETIC_DEMO')
+    return {'status': 'ok', 'game': 'LOTO7', 'history_mode': history_mode,
             'database': {'backend': 'mysql' if service.mysql is not None else 'memory',
-                         'status': db_state, 'draw_count': rows},
+                         'status': db_state, 'draw_count': summary['count'],
+                         'first_draw': summary['first_draw'], 'last_draw': summary['last_draw'],
+                         'last_date': summary['last_date'],
+                         'missing_count': summary['missing_count']},
             'learning': 'numpy_mlp', 'three_agents': 'rules; llm optional',
             'upload_storage': 'MySQL persistent' if service.mysql is not None
                               else 'one-hour in-memory session'}
 
 
+@app.get('/api/history/status')
+def history_status():
+    """登録済みの抽せん履歴件数・初回/最新回を確認する。管理操作は含まない。"""
+    if service.mysql is None:
+        return {'mode': 'memory', 'persistent': False, 'draw_count': 0}
+    try:
+        stats = (service.mysql.stats() if hasattr(service.mysql, 'stats')
+                 else {'count': len(service.mysql.all())})
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail='MySQLへの接続に失敗しました') from exc
+    return {'mode': 'MYSQL', 'persistent': True, 'draw_count': stats['count'],
+            'first_draw': stats.get('first_draw'), 'last_draw': stats.get('last_draw'),
+            'last_date': stats.get('last_date'), 'missing_count': stats.get('missing_count', 0)}
+
+
+def _require_import_admin(request: Request) -> None:
+    """クラウドMySQLへ永続書込するCSV取込を管理者認証で保護する。"""
+    expected = os.getenv('LOTTERY_ADMIN_TOKEN', '')
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail='クラウド取込が未設定です。管理者トークンをRenderの環境変数へ設定してください'
+        )
+    provided = request.headers.get('authorization', '')
+    if not provided.startswith('Bearer '):
+        raise HTTPException(status_code=401, detail='管理者トークンが必要です')
+    if not hmac.compare_digest(provided[7:].encode(), expected.encode()):
+        raise HTTPException(status_code=403, detail='管理者トークンが一致しません')
+
 @app.post('/api/history/upload')
 async def upload_csv(request: Request):
-    """公式CSV直リンクを呼ばず、利用者のCSVを読み込む。最大3MB。"""
+    """CSVから当せん履歴を登録。クラウドMySQLへの書込時は管理者認証が必須。"""
+    if service.mysql is not None:
+        _require_import_admin(request)
     payload = await request.body()
     if not payload or len(payload) > 3_000_000:
         raise HTTPException(status_code=413, detail='CSVは3MB以下にしてください')
@@ -201,8 +243,8 @@ async def upload_csv(request: Request):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     finally:
         Path(filepath).unlink(missing_ok=True)
-    if len(draws) < 20:
-        raise HTTPException(status_code=422, detail='20回以上の履歴が必要です')
+    if service.mysql is None and len(draws) < 20:
+        raise HTTPException(status_code=422, detail='デモ予測には20回以上の履歴が必要です')
     if service.mysql is not None:
         try:
             inserted = service.mysql.upsert(draws, 'CSV')
