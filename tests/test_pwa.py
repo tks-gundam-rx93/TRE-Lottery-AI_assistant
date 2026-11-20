@@ -3,14 +3,12 @@
 PWAのホーム画面登録操作自体はOSの管理領域のため、iOS実機で行う。
 """
 from pathlib import Path
-import json
 import struct
 
 from fastapi.testclient import TestClient
 from app import app
 
 client = TestClient(app)
-WEB = Path(__file__).resolve().parents[1] / "web"
 
 
 def test_manifest_is_valid_and_installable():
@@ -41,7 +39,7 @@ def test_icons_are_real_pngs_with_expected_dimensions():
         response = client.get("/icons/" + filename)
         assert response.status_code == 200
         assert "image/png" in response.headers["content-type"]
-        assert response.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+        assert response.content.startswith(bytes.fromhex("89504e470d0a1a0a"))
         width, height = struct.unpack(">II", response.content[16:24])
         assert (width, height) == (expected, expected)
 
