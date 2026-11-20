@@ -28,6 +28,7 @@ from lottery_ai.core import (Candidate, CsvDrawLoader, DeepLearningStrategy, Dra
     FrequencyStrategy, GapPairStrategy, HistoryAnalyzer, MonteCarloStrategy)
 from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
+from lottery_ai.cloud_import import Loto7HistoryImporter
 
 
 class PredictRequest(BaseModel):
@@ -238,7 +239,9 @@ async def upload_csv(request: Request):
         temp.write(payload)
         filepath = temp.name
     try:
-        draws = CsvDrawLoader().load(filepath)
+        # 本番MySQLのみ抽せん日の実在性を検証。デモの既存CSV互換性は維持する。
+        draws = (Loto7HistoryImporter(service.mysql).load_and_validate(filepath)
+                 if service.mysql is not None else CsvDrawLoader().load(filepath))
     except (ValueError, UnicodeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     finally:
