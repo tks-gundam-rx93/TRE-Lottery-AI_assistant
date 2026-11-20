@@ -109,7 +109,8 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv
 
 - 「AIハロ起動」画面の最下部で「デバッグモード」を選べます。通常モードは3AI（ハロ）、SYSTEM TELEMETRY、TARGET LOTTERY、3-AI COMMS TERMINALを表示します。デバッグモードでは履歴のCSV取込、モデル評価、ハロと音声の調整も表示します。
 - TARGET LOTTERYでくじの種類と表示件数（1〜10通り）を選び、SCANを押すと候補が表示されます。
-- 音声認識対応ブラウザでは3-AI COMMS TERMINALの「マイクON」から「ナンバーズ4を3通り予測」のように指示すると、ハロが認識した種類と件数、候補番号を読み上げます。チャット欄からも同じコマンドを使えます。
+- 音声認識対応ブラウザではデバッグモードで起動し、3-AI COMMS TERMINALの「マイクON」から「ナンバーズ4を3通り予測」のように指示すると、ハロが認識した種類と件数、候補番号を読み上げます。チャット欄からは通常モードでも同じコマンドを使えます。
+- ハロの上部には、起動後の経過時間に占める各ハロの発話時間を円グラフで表示します。
 
 詳細：[docs/loto6_numbers4_import.md](docs/loto6_numbers4_import.md)
 

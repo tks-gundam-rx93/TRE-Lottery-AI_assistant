@@ -61,7 +61,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 #pod-green{left:0;width:34%}
 #pod-orange{left:27%;width:46%;z-index:6}
 #pod-purple{right:0;width:34%}
-.haro-speaking-indicator{position:absolute;top:8px;right:10px;z-index:8;padding:5px 9px;
+.haro-speaking-indicator{position:absolute;bottom:8px;right:10px;z-index:8;padding:5px 9px;
  color:#e9ffff;background:#063b49e8;border:1px solid #49a5cc;border-radius:4px;
  font-size:10px;opacity:0;transition:opacity .2s;pointer-events:none}
 .haro-scene.talking .haro-speaking-indicator{opacity:1}
@@ -85,7 +85,21 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 body:not(.debug-mode) .debug-only{display:none}
 .voice-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .voice-state{margin-top:9px}
-#prediction-count{flex:0 0 auto;min-width:0}
+.lottery-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:stretch;gap:6px}
+.lottery-controls select,.lottery-controls .btn{min-width:0;width:100%;white-space:nowrap;padding:9px 7px}
+#lottery-result-window{margin-top:8px}
+.haro-activity{position:absolute;inset:6px 0 auto;z-index:7;pointer-events:none;
+ display:grid;justify-items:center;gap:3px;font-size:10px;color:#e2f5ff}
+.haro-activity-rates{display:flex;gap:clamp(14px,6vw,42px);text-align:center}
+.haro-activity-rate{display:grid;justify-items:center;gap:2px}
+.haro-activity-ring{display:grid;place-items:center;position:relative;isolation:isolate;
+ width:clamp(25px,8vw,42px);aspect-ratio:1;border-radius:50%;--activity:0%;
+ background:conic-gradient(var(--agent-color) var(--activity),#2a3444 0)}
+.haro-activity-ring::before{content:'';position:absolute;inset:3px;border-radius:50%;
+ background:#07111d;z-index:-1}
+.haro-activity-rate[data-agent="green"]{--agent-color:var(--green)}
+.haro-activity-rate[data-agent="orange"]{--agent-color:var(--orange)}
+.haro-activity-rate[data-agent="purple"]{--agent-color:var(--purple)}
 #lottery-result-area .pattern{width:100%}
 </style>
 </head>
@@ -103,6 +117,20 @@ body:not(.debug-mode) .debug-only{display:none}
 <!-- HARO METHOD 1: GIFの8フレームをそのまま使う方式。待機中は必ず耳を閉じたWebP静止画。 -->
 <section class="stage gif-stage" aria-label="緑・オレンジ・紫の3AIハロ型ユニット GIFアニメーション">
   <div class="haro-scene" id="haro-art-stage" data-speaker="" data-selected="orange">
+    <div class="haro-activity" role="group" aria-label="3AIの発話稼働率（起動後の経過時間に占める発話時間）">
+      <span>3AI 発話稼働率</span>
+      <div class="haro-activity-rates">
+        <div class="haro-activity-rate" data-agent="green">
+          <span class="haro-activity-ring">0%</span><span>NEMESIS</span>
+        </div>
+        <div class="haro-activity-rate" data-agent="orange">
+          <span class="haro-activity-ring">0%</span><span>LOGOS</span>
+        </div>
+        <div class="haro-activity-rate" data-agent="purple">
+          <span class="haro-activity-ring">0%</span><span>CHAOS</span>
+        </div>
+      </div>
+    </div>
     <!-- 待機・発話終了時はGIFの第1フレームに相当する静止画を表示する。 -->
     <img class="haro-scene-frame" id="haro-idle" src="/assets/haro-idle.webp"
       alt="左は緑のNEMESIS、中央手前はオレンジのLOGOS、右は紫のCHAOS。3体とも耳を閉じた待機状態。"
@@ -142,14 +170,13 @@ body:not(.debug-mode) .debug-only{display:none}
 <section class="panel"><h2>SYSTEM TELEMETRY <small id="telemetry-clock">--:--:--</small></h2><div class="telemetry"><div class="meter"><label>API STATUS</label><strong id="api-val">—</strong><div class="bar"></div></div><div class="meter"><label>CSV HISTORY</label><strong id="hist-val">—</strong><div class="bar"></div></div><div class="meter"><label>MLP TRAIN</label><strong id="mlp-val">—</strong><div class="bar"></div></div><div class="meter"><label>API LATENCY</label><strong id="ping-val">—</strong><div class="bar"></div></div></div></section>
 <section class="panel">
   <h2>TARGET LOTTERY</h2>
-  <div class="controls">
+  <div class="controls lottery-controls">
     <select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類">
       <option value="loto7">LOTO7</option>
       <option value="loto6">LOTO6</option>
       <option value="numbers4">NUMBERS4</option>
     </select>
-    <label for="prediction-count">表示件数</label>
-    <select id="prediction-count" onchange="onLotteryChange()">
+    <select id="prediction-count" onchange="onLotteryChange()" aria-label="表示件数">
       <option value="1">1通り</option>
       <option value="2">2通り</option>
       <option value="3">3通り</option>
@@ -162,8 +189,8 @@ body:not(.debug-mode) .debug-only{display:none}
       <option value="10">10通り</option>
     </select>
     <button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button>
-    <button class="btn debug-only" onclick="openPredictionModal()">候補ウィンドウ</button>
   </div>
+  <button class="btn debug-only" id="lottery-result-window" onclick="openPredictionModal()">候補ウィンドウ</button>
   <div class="result" id="lottery-result-area" aria-live="polite">SCANで候補を生成します。</div>
 </section>
 
@@ -174,9 +201,9 @@ body:not(.debug-mode) .debug-only{display:none}
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
 <section class="panel"><h2 id="active-agent-title">3-AI COMMS TERMINAL [MAIN: LOGOS]</h2><div class="chat-logs" id="chat-logs" aria-live="polite"><div class="msg orange">[LOGOS] 統計解析エンジンを待機中。SCANで予測を開始します。</div><div class="msg">[CHAOS] 候補多様性の分析準備ができています。</div><div class="msg green">[NEMESIS] 確率優位性を保証しない検証モードです。</div></div><div class="chat-input"><input id="chat-input" placeholder="例: ロト6を3通り予測 / 3AI判定" onkeydown="if(event.key==='Enter')sendChatMessage()" aria-label="操作コマンド"><button class="btn" onclick="sendChatMessage()">送信</button></div>
   <div class="voice-actions">
-    <button class="btn orange" id="voice-mic-btn" onclick="voiceAssistant.toggle()" type="button">マイクON</button>
-    <button class="btn" id="voice-wake-btn" onclick="voiceAssistant.wakeByTap()" type="button">ハロ起動（タップ）</button>
-    <button class="btn" id="voice-stop-btn" onclick="voiceAssistant.stopSpeech()" type="button">音声停止</button>
+    <button class="btn orange debug-only" id="voice-mic-btn" onclick="voiceAssistant.toggle()" type="button">マイクON</button>
+    <button class="btn debug-only" id="voice-wake-btn" onclick="voiceAssistant.wakeByTap()" type="button">ハロ起動（タップ）</button>
+    <button class="btn debug-only" id="voice-stop-btn" onclick="voiceAssistant.stopSpeech()" type="button">音声停止</button>
     <label><input type="checkbox" id="voice-output" checked> 音声応答ON</label>
   </div>
   <!-- REFERENCE VOICE: ゲーム録画の音声特徴を参考にした独自合成音を調整する。 -->
@@ -194,7 +221,7 @@ body:not(.debug-mode) .debug-only{display:none}
   </label>
   <button type="button" class="btn" onclick="haroSpeech.preview()">試聴</button>
 </div>
-<div class="voice-state" id="voice-status" role="status" aria-live="polite">マイクを有効にして「ロト6を3通り予測」のように話してください。</div>
+<div class="voice-state debug-only" id="voice-status" role="status" aria-live="polite">マイクを有効にして「ロト6を3通り予測」のように話してください。</div>
 </section>
 </main>
 <!-- デバッグ時の候補表示ウィンドウ。 -->
@@ -230,6 +257,25 @@ function ball(n, game){
 }
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
 const agentNames={orange:'LOGOS',purple:'CHAOS',green:'NEMESIS'};
+// 表示する稼働率は、起動後の経過時間に占める実際の発話時間。
+let activityStart=0;
+const haroActivity=Object.fromEntries(
+  Array.from(document.querySelectorAll('.haro-activity-rate'), element=>[
+    element.dataset.agent,{ring:element.querySelector('.haro-activity-ring'),duration:0,since:null}
+  ])
+);
+
+function updateHaroActivity(now=performance.now()){
+  if(!systemBooted)return;
+  const elapsed=now-activityStart;
+  for(const {ring,duration,since} of Object.values(haroActivity)){
+    const speaking=duration+(since===null?0:now-since);
+    const rate=elapsed>0?Math.round(100*speaking/elapsed):0;
+    ring.style.setProperty('--activity',rate+'%');
+    ring.textContent=rate+'%';
+  }
+}
+
 /** TRE-UI: ユーザーが選択したハロを強調表示し、担当AIの説明をログへ記録。 */
 function selectHaro(id){if(!agentNames[id])return;document.querySelectorAll('.haro-unit').forEach(x=>x.classList.remove('selected'));$('pod-'+id).classList.add('selected');$('haro-art-stage').dataset.selected=id;currentHaro=id;$('active-agent-title').textContent='3-AI COMMS TERMINAL ['+agentNames[id]+']';const descr={orange:'論理・統計の検証を担当します。',purple:'フン、甘い候補ね。根拠の弱い予想は容赦なく切り捨てるわ。',green:'過学習や見かけの傾向を疑います。'};addLog(id, '['+agentNames[id]+'] '+descr[id]);if(voiceAssistant.awake)haroSpeech.say(agentNames[id]+'だぞ。'+descr[id],id)}
 /** TRE-UI: 予測結果が存在する場合のみモーダルを開く。 */
@@ -619,7 +665,16 @@ class HaroSpeechController {
     if(!el)return;
     el.classList.toggle('speaking',enabled);
     setHaroArtSpeaking(id,enabled);
-    if(!enabled)el.classList.remove('voice-accent');
+    if(!enabled){
+      el.classList.remove('voice-accent');
+      const activity=haroActivity[id];
+      if(activity.since!==null){
+        const now=performance.now();
+        activity.duration+=now-activity.since;
+        activity.since=null;
+        updateHaroActivity(now);
+      }
+    }
   }
   _accent(id){
     const el=$('pod-'+id);
@@ -698,6 +753,7 @@ class HaroSpeechController {
       utterance.onstart=()=>{
         if(token!==this.sequence||finished)return;
         started=true;
+        haroActivity[id].since=performance.now();
         clearTimeout(startGuard);
         this._setFace(id,true);
         this._startCadence(utterance.rate);
@@ -983,7 +1039,10 @@ async function refreshAdditionalHistoryStatus(){
 
 /** 起動後にのみ時計とAPI接続確認を開始する。起動前はfetchしない。 */
 async function initializeHaroSystem(){
-  const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');
+  const tick=()=>{
+    $('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');
+    updateHaroActivity();
+  };
   tick();setInterval(tick,1000);
   try{
     const res=await fetch('/api/health');
@@ -1027,6 +1086,7 @@ function bootHaroSystem(){
   // ブラウザの自動再生制限に対応するため、クリック中に音声処理を有効化する。
   haroSpeech.restoreSettings();
   haroSpeech.armAudio();
+  activityStart=performance.now();
   systemBooted=true;
   document.body.classList.toggle('debug-mode',$('debug-mode').checked);
   document.body.classList.remove('boot-locked');
