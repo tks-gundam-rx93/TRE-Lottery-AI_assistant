@@ -78,7 +78,10 @@ class Loto7HistoryImporter:
         plan = self.plan(draws)
         if plan.conflicted:
             raise ValueError(f"既存DBと抽せん履歴が矛盾する回号: {plan.conflicted[:20]}")
-        inserted = 0 if dry_run else self.repository.upsert(list(plan.new_draws), "CSV_MANUAL")
+        # クラウドDBでは一括INSERTにより通信往復を最小化する。
+        # 古いテスト用Repoはupsertしか持たないため互換性を保つ。
+        save = getattr(self.repository, "upsert_many", self.repository.upsert)
+        inserted = 0 if dry_run else save(list(plan.new_draws), "CSV_MANUAL")
         stats = self.repository.stats()
         return {
             "file": Path(filename).name,
