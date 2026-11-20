@@ -16,14 +16,21 @@ header strong{color:var(--cyan);font-size:14px;letter-spacing:1.5px;text-shadow:
 /* TRE-UI: API・CSV履歴・MLP学習・通信時間の状態計器。 */
 .telemetry{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.meter{border:1px solid #224a60;background:#03111d;text-align:center;padding:8px 3px;border-radius:3px}.meter label{display:block;color:#69869c;font-size:9px}.meter strong{display:block;color:#00ffc2;padding:5px 0;font-size:13px}.bar{height:3px;background:linear-gradient(90deg,var(--cyan) 45%,#163348 45%)}
 /* TRE-UI: くじ選択とボタン類の共通デザイン。 */
-.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.controls>*{flex-shrink:0}.controls select,.controls input[type=text]{background:#021018;color:var(--cyan);border:1px solid var(--cyan);padding:10px;font:inherit;min-width:0;border-radius:3px}.controls select{flex:1;min-width:170px}.btn{cursor:pointer;background:linear-gradient(145deg,#12374d,#0b2339);color:var(--cyan);border:1px solid var(--cyan);border-radius:3px;padding:10px 12px;font:inherit;font-weight:bold}.btn:disabled{opacity:.5;cursor:wait}.btn:focus-visible,.haro:focus-visible{outline:2px solid #fff}.btn.orange{border-color:var(--orange);color:#ffb862;background:linear-gradient(145deg,#46301c,#1a1420)}.result{margin-top:10px;background:#020811;border:1px dashed #315c77;padding:10px;min-height:48px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}.lotto-ball{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:13px;font-weight:900;box-shadow:inset -3px -4px 7px #0007,inset 2px 3px 5px #fff7,0 1px 5px #0008;border:1px solid #fffa}.ball-white{background:radial-gradient(circle at 25% 25%,white,#aaa);color:#111}.ball-yellow{background:radial-gradient(circle at 25% 25%,#fff77b,#e7a800);color:#111}.ball-green{background:radial-gradient(circle at 25% 25%,#8ff79f,#078935);color:#fff}.ball-red{background:radial-gradient(circle at 25% 25%,#ff8d8d,#c31925);color:#fff}.ball-blue{background:radial-gradient(circle at 25% 25%,#7bb7ff,#1453c7);color:#fff}.ball-pink{background:radial-gradient(circle at 25% 25%,#ffc2e6,#d52b7f);color:#fff}.ball-purple{background:radial-gradient(circle at 25% 25%,#d6a9ff,#5510bd);color:#fff}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.controls>*{flex-shrink:0}.controls select,.controls input[type=text]{background:#021018;color:var(--cyan);border:1px solid var(--cyan);padding:10px;font:inherit;min-width:0;border-radius:3px}.controls select{flex:1;min-width:170px}.btn{cursor:pointer;background:linear-gradient(145deg,#12374d,#0b2339);color:var(--cyan);border:1px solid var(--cyan);border-radius:3px;padding:10px 12px;font:inherit;font-weight:bold}.btn:disabled{opacity:.5;cursor:wait}.btn:focus-visible,.haro:focus-visible{outline:2px solid #fff}.btn.orange{border-color:var(--orange);color:#ffb862;background:linear-gradient(145deg,#46301c,#1a1420)}.result{margin-top:10px;background:#020811;border:1px dashed #315c77;padding:10px;min-height:48px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}.lotto-ball{display:inline-flex;align-items:center;justify-content:center;flex:0 1 34px;min-width:0;aspect-ratio:1;border-radius:50%;font-size:13px;font-weight:900;box-shadow:inset -3px -4px 7px #0007,inset 2px 3px 5px #fff7,0 1px 5px #0008;border:1px solid #fffa}.ball-white{background:radial-gradient(circle at 25% 25%,white,#aaa);color:#111}.ball-yellow{background:radial-gradient(circle at 25% 25%,#fff77b,#e7a800);color:#111}.ball-green{background:radial-gradient(circle at 25% 25%,#8ff79f,#078935);color:#fff}.ball-red{background:radial-gradient(circle at 25% 25%,#ff8d8d,#c31925);color:#fff}.ball-blue{background:radial-gradient(circle at 25% 25%,#7bb7ff,#1453c7);color:#fff}.ball-pink{background:radial-gradient(circle at 25% 25%,#ffc2e6,#d52b7f);color:#fff}.ball-purple{background:radial-gradient(circle at 25% 25%,#d6a9ff,#5510bd);color:#fff}
 /* TRE-UI: 補足説明・デモモードの注意文を表示する領域。 */
 .note{font-size:10px;color:#9ab8d1;line-height:1.7;margin-top:8px}.note.warning{color:#ffc078}.upload{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.upload input{flex:1;min-width:170px;color:#d4f6ff;font-size:11px}.report{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:11px;margin:0;color:#bfe1f7}.chat-logs{height:145px;overflow:auto;background:#020912;border:1px solid #1a4159;padding:10px;display:grid;align-content:start;gap:9px}.msg{padding:7px;border-left:3px solid var(--cyan);background:#00bbff12;line-height:1.5}.msg.orange{border-color:var(--orange);background:#ff850014}.msg.green{border-color:var(--green);background:#00ff6611}.msg.user{border-color:#fff;background:#ffffff13}.chat-input{display:flex;gap:8px;margin-top:9px}.chat-input input{flex:1;min-width:0;background:#031524;color:#fff;border:1px solid #205e7a;padding:10px;border-radius:3px}
-/* TRE-UI: 予測候補5通りを表示するモーダルウィンドウ。 */
-.modal{display:none;position:fixed;inset:0;background:#01040bbb;z-index:100;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px)}.modal.open{display:flex}.window{width:min(520px,100%);max-height:90vh;overflow:auto;border:2px solid var(--cyan);box-shadow:0 0 28px #00e5ff50;background:linear-gradient(#10223b,#061122);border-radius:5px}.window-title{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#16344e;border-bottom:1px solid var(--cyan);color:white;font-weight:bold}.window-body{padding:12px;display:grid;gap:9px}.pattern{display:flex;gap:7px;align-items:center;padding:7px;background:#061529;border:1px solid #225474;border-radius:4px;flex-wrap:wrap}.pattern strong{color:var(--orange);font-size:11px;min-width:52px}.pattern .ballbox{display:flex;gap:4px;flex-wrap:wrap;flex:1}.pattern small{color:#77d2fb;font-size:9px}.legend{color:#9bbcd1;text-align:center;font-size:10px;line-height:1.8}.footer{text-align:center;color:#53778d;font-size:10px;padding:18px;border-top:1px solid #173048}
+/* TRE-UI: 予測候補を表示するモーダルウィンドウ。 */
+.modal{display:none;position:fixed;inset:0;background:#01040bbb;z-index:100;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px)}.modal.open{display:flex}.window{width:min(520px,100%);max-height:90vh;overflow:auto;border:2px solid var(--cyan);box-shadow:0 0 28px #00e5ff50;background:linear-gradient(#10223b,#061122);border-radius:5px}.window-title{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:#16344e;border-bottom:1px solid var(--cyan);color:white;font-weight:bold}.window-body{padding:12px;display:grid;gap:9px}.pattern{display:flex;align-items:center;gap:7px;padding:7px;background:#061529;
+ border:1px solid #225474;border-radius:4px;white-space:nowrap}
+.pattern strong{color:var(--orange);font-size:11px;flex:none}
+.ballbox{display:flex;align-items:center;gap:clamp(3px,1vw,6px);flex:1;min-width:0}
+.numbers4-digits{color:#e2f5ff;font:900 1.5rem/1.2 "Arial Black",system-ui,sans-serif;
+ font-variant-numeric:tabular-nums;letter-spacing:.16em}
+#prediction-patterns{display:grid;gap:6px}
+.footer{text-align:center;color:#53778d;font-size:10px;padding:18px;border-top:1px solid #173048}
 /* TRE-UI: 小画面時のハロ・ボール等のサイズ調整。 */
 /* HARO MOBILE: PC/スマホともにサイズ比率と重なり方を共用。狭い画面ではステージ高さを可変にする。 */
-@media(max-width:500px){.stage{height:clamp(200px,62vw,260px)}.main{padding:10px}.lotto-ball{width:30px;height:30px;font-size:11px}.pattern .lotto-ball{width:29px;height:29px}.panel h2{font-size:10px}.controls .btn{padding:9px 7px}}
+@media(max-width:500px){.stage{height:clamp(200px,62vw,260px)}.main{padding:10px}.lotto-ball{flex-basis:29px;font-size:11px}.panel h2{font-size:10px}.controls .btn{padding:9px 7px}}
 
 .voice-tuning{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:11px;border-top:1px solid #1b526e;padding-top:10px}
 .voice-tuning label{display:grid;gap:5px;color:#adcae0;font-size:11px;min-width:115px;flex:1}
@@ -196,8 +203,8 @@ body:not(.debug-mode) .debug-only{display:none}
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
 <section class="panel debug-only"><h2>DRAW HISTORY / CSV IMPORT <small>3 GAMES / LOTO7 UPLOAD</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note" id="other-game-history-status" role="status">LOTO6 / NUMBERS4：履歴件数を確認中。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
-<!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
-<section class="panel debug-only"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
+<!-- TRE-UI: 候補の生成方法とモデルの検証指標を表示。 -->
+<section class="panel debug-only"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行すると、候補の生成方法とモデルの検証指標を表示します。</pre></section>
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
 <section class="panel"><h2 id="active-agent-title">3-AI COMMS TERMINAL [MAIN: LOGOS]</h2><div class="chat-logs" id="chat-logs" aria-live="polite"><div class="msg orange">[LOGOS] 統計解析エンジンを待機中。SCANで予測を開始します。</div><div class="msg">[CHAOS] 候補多様性の分析準備ができています。</div><div class="msg green">[NEMESIS] 確率優位性を保証しない検証モードです。</div></div><div class="chat-input"><input id="chat-input" placeholder="例: ロト6を3通り予測 / 3AI判定" onkeydown="if(event.key==='Enter')sendChatMessage()" aria-label="操作コマンド"><button class="btn" onclick="sendChatMessage()">送信</button></div>
   <div class="voice-actions">
@@ -249,10 +256,10 @@ function addLog(who,text){const el=document.createElement('div');el.className='m
 /** TRE-UI: 1～37の数字を5数字単位のボール色へ分類。 */
 function getBallClass(n){return ['ball-white','ball-yellow','ball-green','ball-red','ball-blue','ball-pink','ball-purple'][Math.min(6,Math.floor((n-1)/5))]}
 /** TRE-UI: 番号に対応した色とゼロ埋め2桁表示のDOMを生成。 */
-function ball(n, game){
+function ball(n){
   const el=document.createElement('span');
-  el.className='lotto-ball '+getBallClass(Math.max(1,n));
-  el.textContent=String(n).padStart(game==='NUMBERS4'?1:2,'0');
+  el.className='lotto-ball '+getBallClass(n);
+  el.textContent=String(n).padStart(2,'0');
   return el;
 }
 /** TRE-UI: ハロの色と3AI判定者（LOGOS／CHAOS／NEMESIS）の対応。 */
@@ -292,13 +299,15 @@ function renderPrediction(d){
     row.className='pattern';
     const name=document.createElement('strong');
     name.textContent='SET-'+String(i+1).padStart(2,'0');
-    const balls=document.createElement('div');
-    balls.className='ballbox';
-    balls.setAttribute('aria-label',d.game==='NUMBERS4'?c.numbers.join(''):c.numbers.join('、'));
-    c.numbers.forEach(n=>balls.appendChild(ball(n,d.game)));
-    const hint=document.createElement('small');
-    hint.textContent=c.method+(c.votes==null?'':' / '+c.votes+'票');
-    row.append(name,balls,hint);
+    const numbers=document.createElement('div');
+    if(d.game==='NUMBERS4'){
+      numbers.className='numbers4-digits';
+      numbers.textContent=c.numbers.join('');
+    }else{
+      numbers.className='ballbox';
+      c.numbers.forEach(n=>numbers.appendChild(ball(n)));
+    }
+    row.append(name,numbers);
     return row;
   });
   const sources={MYSQL:'MySQL',BUNDLED_CSV:'同梱CSV',UPLOADED_CSV:'取込CSV',SYNTHETIC_DEMO:'架空データのデモ'};
@@ -318,17 +327,9 @@ function renderPrediction(d){
 
   const lines=['■ データ種別: '+source+' '+d.history_count+'回'];
   if(d.training)lines.push('■ 深層学習: '+d.training.method+' 検証BCE='+d.training.validation_bce+' / ランダム基準BCE='+d.training.random_baseline_bce);
-  if(d.debate){
-    lines.push('■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース'),'');
-    for(const v of d.debate.first_round)lines.push('独立判定 '+v.agent+': '+v.candidate_id+' / '+v.reason);
-    for(const v of d.debate.second_round){
-      lines.push('反論・再判定 '+v.agent+': '+v.candidate_id+' / '+v.critique);
-      addLog(v.agent==='LOGOS'?'orange':v.agent==='NEMESIS'?'green':'blue','['+v.agent+'] '+v.candidate_id+'を支持: '+v.reason);
-    }
-    lines.push('最終支持: '+d.debate.winner_id);
-  }else{
-    lines.push('■ 候補生成: '+d.candidates[0].method);
-  }
+  const methods=[...new Set(d.candidates.map(candidate=>candidate.method))];
+  lines.push('■ 候補生成: '+methods.join(' / '));
+  if(d.debate)lines.push('■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース'));
   $('ai-verdict-details').textContent=[...lines,'',d.warning].join('\n');
   addLog('orange','[ハロ] '+summary.textContent);
 }
