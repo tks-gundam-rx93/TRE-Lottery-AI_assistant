@@ -172,10 +172,40 @@ def home():
     return FileResponse(Path(__file__).parent / 'web' / 'index.html', media_type='text/html')
 
 
+def _safe_db_error_code(exc: Exception) -> str:
+    """DB資格情報や接続先を露出させず、エラーの種類だけを分類する。"""
+    message = str(exc).lower()
+    if "certificate verify failed" in message or "certificate_verify_failed" in message:
+        return "tls_certificate"
+    if "ssl" in message or "tls" in message:
+        return "tls_handshake"
+    if "access denied" in message or "authentication" in message:
+        return "authentication"
+    if "unknown database" in message:
+        return "database_missing"
+    if "name or service not known" in message or "getaddrinfo" in message:
+        return "dns"
+    if "timed out" in message or "timeout" in message:
+        return "timeout"
+    args = getattr(exc, 'args', ())
+    code = args[0] if args and isinstance(args[0], int) else None
+    if code == 1045:
+        return "authentication"
+    if code == 1049:
+        return "database_missing"
+    if code in (2003, 2005):
+        return "network"
+    if code in (1044, 1142):
+        return "permission"
+    return "driver_or_query"
+
+
 @app.get('/api/health')
 def health():
     """MySQLの実接続状態と保存済み回号を公開。接続情報や秘密は返さない。"""
     db_state = 'disabled'
+    db_error_type = None
+    db_error_code = None
     summary = {'count': 0, 'first_draw': None, 'last_draw': None, 'last_date': None, 'missing_count': 0}
     if service.mysql is not None:
         try:
@@ -183,8 +213,10 @@ def health():
                 count=len(service.mysql.all()), first_draw=None, last_draw=None,
                 last_date=None, missing_count=0)
             db_state = 'connected'
-        except Exception:
+        except Exception as exc:
             db_state = 'unavailable'
+            db_error_type = type(exc).__name__
+            db_error_code = _safe_db_error_code(exc)
     history_mode = ('MYSQL' if db_state == 'connected' and summary['count'] >= 20
                     else 'MYSQL_WAITING' if service.mysql is not None else 'SYNTHETIC_DEMO')
     return {'status': 'ok', 'game': 'LOTO7', 'history_mode': history_mode,
@@ -192,7 +224,8 @@ def health():
                          'status': db_state, 'draw_count': summary['count'],
                          'first_draw': summary['first_draw'], 'last_draw': summary['last_draw'],
                          'last_date': summary['last_date'],
-                         'missing_count': summary['missing_count']},
+                         'missing_count': summary['missing_count'],
+                         'error_type': db_error_type, 'error_code': db_error_code},
             'learning': 'numpy_mlp', 'three_agents': 'rules; llm optional',
             'upload_storage': 'MySQL persistent' if service.mysql is not None
                               else 'one-hour in-memory session'}
