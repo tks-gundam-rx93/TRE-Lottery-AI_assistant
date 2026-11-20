@@ -86,6 +86,26 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv
 
 手順詳細：[docs/cloud_mysql_history_import.md](docs/cloud_mysql_history_import.md)
 
+## LOTO6 / NUMBERS4の過去データ保存（2026-11-20）
+
+ユーザー提供のCP932 CSVを検証して、LOTO7と独立したテーブルへ取り込む機能を追加。
+
+| 種類 | 収録回 | DBテーブル |
+|---|---|---|
+| LOTO6 | 第1～2156回（2,156件） | `loto6_draw_results` |
+| NUMBERS4 | 第1～6436回（6,436件） | `numbers4_draw_results` |
+
+- LOTO6第2134回の元CSV誤記（本数字`29`→公表番号`19`）を訂正。
+- NUMBERS4は`0097`等の先頭0を保持した文字列`CHAR(4)`で保存。
+- CSVには抽せん日がないため、DBの`draw_date`はNULL。架空の日付を補わない。
+- **NUMBERS4は2024-03-29の第6436回までの部分履歴**で、2026-11-19時点の第7118回まで682回が未収録。
+- 登録用ファイルは`data/*.csv.gz`として保存し、SHA-256を照合。重複回号の再登録を防ぎ、既存値との不一致はロールバックする。
+- 初回のみRenderの`LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES=1`を設定して取込。成功後は`0`に戻す。
+- `GET /api/history/status/LOTO6`、`GET /api/history/status/NUMBERS4`で履歴件数を確認可能。
+- **予測・深層学習・3AI判定はまだLOTO7のみ**。2種類の予測対応は別タスク。
+
+詳細：[docs/loto6_numbers4_import.md](docs/loto6_numbers4_import.md)
+
 ## LOTO7実履歴の初回一括登録（2026-11-20）
 
 ユーザー提供の `loto7.csv`（CP932）から、第1～703回の本数字・ボーナス数字を検証し、`data/loto7_history_001_703.csv`（UTF-8）として正規化しました。
