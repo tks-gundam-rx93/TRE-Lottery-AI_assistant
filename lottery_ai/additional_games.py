@@ -116,24 +116,24 @@ class AdditionalGameArchive:
 
 
 def generate_candidates(
-    game: GameCode, draws: list[Loto6Draw] | list[Numbers4Draw], count: int, seed: int,
+    game: GameCode, counts: list[Counter[int]], model_scores: list[list[float]],
+    count: int, seed: int,
 ) -> list[tuple[int, ...]]:
-    """過去の出現頻度で重み付けし、異なる組み合わせを生成する。"""
+    """頻度とMLPの出力をそれぞれ正規化し、等しい重みで候補生成に使う。"""
     rng = random.Random(seed)
-    if game == "LOTO6":
-        frequencies = Counter(n for draw in draws for n in draw.numbers)
-    else:
-        positions = [
-            [1 + sum(int(draw.winning_number[i]) == digit for draw in draws)
-             for digit in range(10)]
-            for i in range(4)
-        ]
+    numbers = range(1, 44) if game == "LOTO6" else range(10)
+    groups = []
+    for frequencies, scores in zip(counts, model_scores):
+        observed = [frequencies[n] + 1 for n in numbers]
+        total_observed, total_scores = sum(observed), sum(scores)
+        groups.append([n / total_observed + score / total_scores
+                       for n, score in zip(observed, scores)])
 
     unique: dict[tuple[int, ...], None] = {}
     while len(unique) < count:
         if game == "LOTO6":
-            pool = list(range(1, 44))
-            weights = [frequencies[n] + 1 for n in pool]
+            pool = list(numbers)
+            weights = groups[0].copy()
             selected = []
             for _ in range(6):
                 index = rng.choices(range(len(pool)), weights)[0]
@@ -141,7 +141,7 @@ def generate_candidates(
                 weights.pop(index)
             candidate = tuple(sorted(selected))
         else:
-            candidate = tuple(rng.choices(range(10), weights)[0] for weights in positions)
+            candidate = tuple(rng.choices(numbers, weights)[0] for weights in groups)
         unique[candidate] = None
     return list(unique)
 

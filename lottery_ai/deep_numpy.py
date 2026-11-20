@@ -1,4 +1,4 @@
-"""NumPyによる小規模MLP（2隠れ層）。公開デモでも実際に学習を実行する。"""
+"""NumPyによる小規模MLP（2隠れ層）。くじごとの履歴から実際に学習を実行する。"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,9 +21,9 @@ class NumpyTrainingReport:
 
 
 class NumpyDeepForecaster:
-    """111→32→16→37のニューラルネットワーク。
+    """くじごとの当せん結果を学習する、32・16ユニットの2隠れ層MLP。
 
-    7つの当せん数字をmulti-labelの37次元で表現してBCEを学習。
+    本数字の出現や桁別の出現をmulti-labelで表現してBCEを学習。
     データリーク防止のため時系列の後ろ20%を検証用に分離する。
     学習出力は未校正の選択スコアで、次回の確率を示さない。
     """
@@ -68,20 +68,34 @@ class NumpyDeepForecaster:
         if len(ordered) < 80:
             raise ValueError('深層学習には80回以上の履歴が必要です')
 
-        if game == "LOTO6":
-            draws = np.array([draw.numbers for draw in ordered])
-            labels = np.zeros((len(draws), 43))
-            labels[np.arange(len(draws))[:, None], draws - 1] = 1
-            baseline = 6 / 43
-        else:
-            digits = np.array([list(draw.winning_number) for draw in ordered], dtype=int)
-            labels = np.eye(10)[digits].reshape(len(ordered), 40)
-            baseline = 1 / 10
-
+        labels = self._encode_additional(game, ordered)
+        baseline = 6 / 43 if game == "LOTO6" else 1 / 10
         window = 20
         sums = np.vstack([np.zeros(labels.shape[1]), labels.cumsum(axis=0)])
         features = (sums[window:-1] - sums[:-window - 1]) / window
         return self._fit(features, labels[window:], baseline)
+
+    @staticmethod
+    def _encode_additional(
+        game: GameCode, history: list[Loto6Draw] | list[Numbers4Draw],
+    ) -> np.ndarray:
+        if game == "LOTO6":
+            draws = np.array([draw.numbers for draw in history])
+            labels = np.zeros((len(draws), 43))
+            labels[np.arange(len(draws))[:, None], draws - 1] = 1
+            return labels
+        digits = np.array([list(draw.winning_number) for draw in history], dtype=int)
+        return np.eye(10)[digits].reshape(len(history), 40)
+
+    def predict_additional(
+        self, game: GameCode, history: list[Loto6Draw] | list[Numbers4Draw],
+    ) -> list[list[float]]:
+        if not self.params:
+            raise RuntimeError('モデルが未学習です')
+        recent = sorted(history, key=lambda draw: draw.draw_no)[-20:]
+        labels = self._encode_additional(game, recent)
+        _, _, scores = self._forward(labels.mean(axis=0, keepdims=True))
+        return scores.reshape(1 if game == "LOTO6" else 4, -1).tolist()
 
     def _fit(self, x: np.ndarray, y: np.ndarray, baseline_rate: float) -> NumpyTrainingReport:
         input_size, output_size = x.shape[1], y.shape[1]

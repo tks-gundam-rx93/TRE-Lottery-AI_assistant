@@ -79,7 +79,7 @@ def test_mysql_api_integration_without_real_db(monkeypatch):
     writer = csv.writer(data)
     writer.writerow(["draw_no", "draw_date", *[f"n{i}" for i in range(1, 8)]])
     rng = random.Random(106)
-    for number in range(1, 23):
+    for number in range(1, 83):
         writer.writerow([number, "2026-01-01", *sorted(rng.sample(range(1, 38), 7))])
 
     body = data.getvalue().encode("utf-8")
@@ -91,20 +91,20 @@ def test_mysql_api_integration_without_real_db(monkeypatch):
     first = client.post("/api/history/upload", content=body, headers=authorized)
     assert first.status_code == 200, first.text
     assert first.json()["mode"] == "MYSQL"
-    assert first.json()["inserted"] == 22
+    assert first.json()["inserted"] == 82
     assert first.json()["session"] is None
     second = client.post("/api/history/upload", content=body, headers=authorized)
     assert second.status_code == 200
     assert second.json()["inserted"] == 0
     status = client.get("/api/history/status").json()
     assert status["persistent"] is True
-    assert status["draw_count"] == 22
+    assert status["draw_count"] == 82
 
     response = client.post("/api/predict", json={"count": 2, "samples": 30})
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["mode"] == "MYSQL"
-    assert result["last_draw"] == 22
+    assert result["last_draw"] == 82
     assert result["prediction_run_id"] == "deadbeef" * 4
     assert len(fake.results) == 1
 
