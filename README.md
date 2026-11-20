@@ -82,9 +82,26 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv --dry-run
 python -m lottery_ai.cloud_import --csv loto7_history.csv
 ```
 
-**重要:** 現在このリポジトリには実際のクラウドMySQLサーバー・接続パスワード・ロト7履歴CSVは含まれていません。Render側でDBサービスと接続情報を設定し、実CSVを取り込んでから本番保存が可能となります。みずほ銀行の自動取得は接続制限・利用条件の確認が必要なため、未実装です。
+**重要:** TiDB Cloud StarterのDBは別サービスで作成済みです。資格情報はRender環境変数にのみ保存します。第1〜703回の検証済みCSVをリポジトリに含め、明示的なBootstrap有効化で初回登録します。みずほ銀行の自動取得は接続制限・利用条件の確認が必要なため、未実装です。
 
 手順詳細：[docs/cloud_mysql_history_import.md](docs/cloud_mysql_history_import.md)
+
+## LOTO7実履歴の初回一括登録（2026-11-20）
+
+ユーザー提供の `loto7.csv`（CP932）から、第1～703回の本数字・ボーナス数字を検証し、`data/loto7_history_001_703.csv`（UTF-8）として正規化しました。
+
+- ファイル内の回号は連続・重複なし。日付範囲：2013-04-05～2026-11-13
+- 第483回の元CSV日付が2022-08-13（土）だったため、楽天銀行の公表結果を確認して2022-08-12（金）に訂正
+- **Render環境変数 `LOTTERY_BOOTSTRAP_CSV=1` を設定した場合のみ**、起動時に `tre_lottery.draw_results` へ不足分を一括登録する
+- 登録はトランザクションで原子的に処理し、再デプロイで二重登録しない
+- 本番DBの既存結果と相違がある場合は登録を中断する
+- `GET /api/history/status` で登録後の件数・最終回号・欠落回数を確認できる
+- 元CSVの賞金額・当せん口数は予測履歴テーブルへは登録しない
+- 取込元の703件すべてについて外部公式結果との個別照合を完了したわけではない
+
+来週以降の新規抽せん結果は、管理者認証付きのCSV取込で追加できます。
+
+出典・データ訂正・検査内容: [docs/loto7_history_import_001_703.md](docs/loto7_history_import_001_703.md)
 
 ## ハロ音声の参考動画に基づく調整
 

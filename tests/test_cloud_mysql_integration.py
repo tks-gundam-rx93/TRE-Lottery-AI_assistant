@@ -12,6 +12,7 @@ import pytest
 
 from lottery_ai.core import Draw
 from lottery_ai.cloud_import import Loto7HistoryImporter
+from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 
 
@@ -61,3 +62,39 @@ def test_real_mysql_create_insert_duplicate_conflict_and_prediction(tmp_path):
     prediction_id = repo.save_prediction(run)
     assert len(prediction_id) == 32
     assert uuid.UUID(hex=prediction_id)
+
+
+@pytest.mark.skipif(
+    os.getenv("RUN_MYSQL_INTEGRATION") != "1",
+    reason="一時的なCI用MySQLサービスがある時のみ実行する"
+)
+def test_real_mysql_import_703_rows_and_retry_without_duplicates():
+    """実MySQL 8で全703回を原子的にINSERT。再実行しても0件追加。"""
+    settings = MySqlSettings(
+        host="127.0.0.1", port=3306, user="tre_ci",
+        password="ci_only_password", database="tre_lottery", ssl_mode="disabled"
+    )
+    repo = MySqlDrawRepository(settings)
+    # このテスト専用の使い捨てMySQLコンテナのみを対象にする。
+    conn = repo._connect()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM draw_results WHERE lottery_type=%s", ("LOTO7",))
+        conn.commit()
+    finally:
+        conn.close()
+
+    first = Loto7HistoryBootstrap(repo).run()
+    assert first["csv_rows"] == 703
+    assert first["inserted"] == 703
+    stats = repo.stats()
+    assert stats["count"] == 703
+    assert stats["first_draw"] == 1
+    assert stats["last_draw"] == 703
+    assert stats["last_date"] == "2026-11-13"
+    assert stats["missing_count"] == 0
+
+    second = Loto7HistoryBootstrap(repo).run()
+    assert second["inserted"] == 0
+    assert second["skipped"] == 703
+    assert repo.stats()["count"] == 703

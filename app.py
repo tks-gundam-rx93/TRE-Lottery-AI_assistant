@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import json
 import os
+import logging
 import hmac
 from pathlib import Path
 import random
@@ -29,6 +30,7 @@ from lottery_ai.core import (Candidate, CsvDrawLoader, DeepLearningStrategy, Dra
 from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 from lottery_ai.cloud_import import Loto7HistoryImporter
+from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
 
 
 class PredictRequest(BaseModel):
@@ -72,7 +74,7 @@ class PredictionService:
     def __init__(self):
         self.sessions = SessionHistoryStore()
         self.demo = self._make_demo(160)
-        # Renderはデモ、ローカル発表は環境変数によってMySQLに切替える。
+        # 公開Render環境ではLOTTERY_DB_BACKEND=mysqlでTiDB Cloudへ接続する。
         # DBの資格情報はブラウザへ一切送信しない。
         self.mysql = (MySqlDrawRepository(MySqlSettings.from_env())
                       if os.getenv('LOTTERY_DB_BACKEND', 'memory').lower() == 'mysql' else None)
@@ -96,7 +98,7 @@ class PredictionService:
             except Exception as exc:
                 raise HTTPException(
                     status_code=503,
-                    detail='MySQLに接続できません。XAMPPのMySQL起動と環境変数を確認してください'
+                    detail='クラウドMySQLに接続できません。TiDB CloudとRender環境変数を確認してください'
                 ) from exc
             if len(draws) < 20:
                 # 本番MySQLモードで架空の結果を混在させない。
@@ -165,6 +167,35 @@ app = FastAPI(title='TRE-Lottery AI Assistant', version='0.1.0')
 # 方式1の固定画像と8フレームGIFはFastAPIで静的配信する。
 # この分岐ではMySQL・予測処理・音声認識エンドポイントを変更しない。
 app.mount('/assets', StaticFiles(directory=Path(__file__).parent / 'web' / 'assets'), name='haro-assets')
+
+
+@app.on_event("startup")
+def import_verified_loto7_history_on_startup() -> None:
+    """管理者が明示的に有効化したときのみ、第1～703回を初回投入する。
+
+    起動処理にDB資格情報・CSVの各行を書き出さない。既存回の矛盾や
+    接続失敗でも公開UIは停止させず、/api/history/statusで実態を確認できる。
+    """
+    if os.getenv("LOTTERY_BOOTSTRAP_CSV", "").strip() != "1":
+        return
+    if service.mysql is None:
+        logging.getLogger("tre_lottery.import").warning(
+            "history bootstrap skipped: database mode is not enabled"
+        )
+        return
+    try:
+        result = Loto7HistoryBootstrap(service.mysql).run()
+        logging.getLogger("tre_lottery.import").info(
+            "history bootstrap completed: csv_rows=%d inserted=%d skipped=%d db_rows=%d",
+            result["csv_rows"], result["inserted"],
+            result["skipped"], result["db_rows"],
+        )
+    except Exception as exc:
+        # 例外メッセージには接続先・資格情報が入る場合があるため公開しない。
+        logging.getLogger("tre_lottery.import").error(
+            "history bootstrap failed: error_type=%s", type(exc).__name__
+        )
+
 
 
 @app.get('/')
