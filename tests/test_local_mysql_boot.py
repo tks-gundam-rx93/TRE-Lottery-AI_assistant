@@ -1,6 +1,6 @@
-"""ローカルXAMPP/MySQL切替・初回起動画面の回帰テスト。
+"""MySQL永続化・管理者認証・初回起動画面の回帰テスト。
 
-CI環境にはローカルDBがないためフェイクリポジトリで永続化呼び出しを確認。
+CI環境には外部DBがないためフェイクリポジトリで永続化呼び出しを確認。
 """
 import csv
 import io
@@ -63,13 +63,17 @@ def test_mysql_api_integration_without_real_db(monkeypatch):
 
     fake = FakeMysql()
     monkeypatch.setattr(service, "mysql", fake)
+    monkeypatch.setenv("LOTTERY_ADMIN_TOKEN", "ci-test-admin")
     client = TestClient(app)
 
     empty = client.get("/api/health").json()
     assert empty["database"]["backend"] == "mysql"
     assert empty["database"]["status"] == "connected"
     assert empty["database"]["draw_count"] == 0
-    assert empty["history_mode"] == "SYNTHETIC_DEMO"
+    assert empty["history_mode"] == "MYSQL_WAITING"
+    # MySQLを選択して履歴が空のときは架空履歴にフォールバックしない。
+    assert client.post("/api/predict", json={"count": 1, "samples": 30}).status_code == 409
+    assert client.post("/api/history/upload", content=b"untrusted").status_code == 401
 
     data = io.StringIO()
     writer = csv.writer(data)
@@ -79,14 +83,22 @@ def test_mysql_api_integration_without_real_db(monkeypatch):
         writer.writerow([number, "2026-01-01", *sorted(rng.sample(range(1, 38), 7))])
 
     body = data.getvalue().encode("utf-8")
-    first = client.post("/api/history/upload", content=body)
+    # 公開Web上では認証なしのDB書込を拒否。
+    wrong = client.post("/api/history/upload", content=body,
+                        headers={"authorization": "Bearer invalid"})
+    assert wrong.status_code == 403
+    authorized = {"authorization": "Bearer ci-test-admin"}
+    first = client.post("/api/history/upload", content=body, headers=authorized)
     assert first.status_code == 200, first.text
     assert first.json()["mode"] == "MYSQL"
     assert first.json()["inserted"] == 22
     assert first.json()["session"] is None
-    second = client.post("/api/history/upload", content=body)
+    second = client.post("/api/history/upload", content=body, headers=authorized)
     assert second.status_code == 200
     assert second.json()["inserted"] == 0
+    status = client.get("/api/history/status").json()
+    assert status["persistent"] is True
+    assert status["draw_count"] == 22
 
     response = client.post("/api/predict", json={"count": 2, "samples": 30})
     assert response.status_code == 200, response.text

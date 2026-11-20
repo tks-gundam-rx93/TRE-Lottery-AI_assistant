@@ -11,7 +11,7 @@
 - `POST /api/predict` `{"count": 5, "samples": 180, "seed":42, "session":null, "judge":"rules"}`
 - `POST /api/history/upload` `Content-Type: text/csv` のCSV原文。`session`を返す
 
-**公開URLで履歴CSVが未登録の場合、予測は架空160回分の履歴を使用したデモです。** 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
+**DB未接続のデモモードでは架空160回分の履歴を使用します。クラウドMySQLが有効な場合は実際のCSV登録が必要です。** 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
 
 ## ローカル実行
 
@@ -60,25 +60,31 @@ python -m lottery_ai --db data/lottery.db --with-dl
 
 ## GitHub / Render
 
-`main` は基盤用です。専用開発ブランチからPRでコードレビューしてから統合する運用を想定します。
+`main` は方式1の高速GIF UIまでマージ済みです。追加改修は開発ブランチからPRでレビューして統合する運用です。
 RenderのPython Web Service: build `pip install -r requirements.txt`, start `uvicorn app:app --host 0.0.0.0 --port $PORT`。
-## 発表用：ローカルMySQL／phpMyAdmin／iPhone
+## クラウドMySQLに当せん履歴を永続保存（2026-11-20）
 
-発表時はXAMPPのMySQLを使用します。GitHubにDBパスワードは保存しません。
+ローカルXAMPP / `localhost/phpmyadmin` への接続は、通常運用では使用しません。
+**RenderのプライベートMySQL、または外部のクラウドMySQL**へFastAPIから接続する構成です。
 
-1. XAMPPのMySQLとApacheを起動し、`http://localhost/phpmyadmin/` を開く。
-2. `scripts/setup_local_mysql.sql` をphpMyAdminから実行してDBとテーブルを作る。
-3. `tre_lottery_app` を接続元127.0.0.1だけで作成し、`tre_lottery` に必要な権限を与える。
-4. `config/local.env.cmd.example` を `config/local.env.cmd` にコピーし、実際のDBパスワードを設定する。
-5. `python -m pip install -r requirements.txt` 後、`scripts\\start_local.cmd` で起動する。
-6. PCは `http://localhost:8000/`、iPhoneは同じWi-Fiから `http://PCのIPv4:8000/` にアクセスする。
-7. `GET /api/health` の `database.status` が `connected` ならDB接続成功。
+- 接続情報はRender環境変数の `LOTTERY_MYSQL_URL` または `LOTTERY_DB_HOST` / `LOTTERY_DB_USER` / `LOTTERY_DB_PASSWORD` 等に設定（GitHubには含めない）
+- `LOTTERY_DB_BACKEND=mysql` でMySQLを有効化。外部接続はSSL/TLS検証を既定で適用
+- `LOTTERY_ADMIN_TOKEN` を使い、CSVからの永続DB登録を管理者に限定
+- Webの「DRAW HISTORY / CSV IMPORT」から初回全履歴／追加回を登録
+- `GET /api/health` と `GET /api/history/status` で登録件数・最新回・欠落回数を確認
+- MySQLでは20回未満のデータしかなければ**架空デモに自動で切替えない**
+- 予測・3AI判定の結果を `prediction_runs` に保存
 
-**MySQL時の処理:** CSV取込→`draw_results`に重複排除して永続保存→予測実行→`prediction_runs`に予測・判定JSONを保存。MySQLが空で20回未満の場合は架空データによるデモモードを明示します。SQLite用CLIもそのまま利用可能。RenderはMySQLを使わず従来のデモモードです。
+CLIによるCSV初回取込と差分更新：
 
-**起動仕様:** 初期画面では「AIハロ起動」ボタンのみが中央に表示され、押すとメイン画面を公開して「3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・パープル、同期完了」と音声合成します。音声認識にはブラウザの許可・HTTPS制約があります。
+```sh
+python -m lottery_ai.cloud_import --csv loto7_history.csv --dry-run
+python -m lottery_ai.cloud_import --csv loto7_history.csv
+```
 
-手順詳細: [docs/local_xampp_iphone.md](docs/local_xampp_iphone.md)
+**重要:** 現在このリポジトリには実際のクラウドMySQLサーバー・接続パスワード・ロト7履歴CSVは含まれていません。Render側でDBサービスと接続情報を設定し、実CSVを取り込んでから本番保存が可能となります。みずほ銀行の自動取得は接続制限・利用条件の確認が必要なため、未実装です。
+
+手順詳細：[docs/cloud_mysql_history_import.md](docs/cloud_mysql_history_import.md)
 
 ## ハロ音声の参考動画に基づく調整
 
