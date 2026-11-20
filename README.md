@@ -11,7 +11,7 @@
 - `POST /api/predict` `{"count": 5, "samples": 180, "seed":42, "session":null, "judge":"rules"}`
 - `POST /api/history/upload` `Content-Type: text/csv` のCSV原文。`session`を返す
 
-**DB未接続のデモモードでは架空160回分の履歴を使用します。クラウドMySQLが有効な場合は実際のCSV登録が必要です。** 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
+MySQL設定済みの環境では登録済みの当せん履歴を、MySQL未設定の環境では同梱の実履歴CSVを使用します。 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
 
 ## ローカル実行
 
@@ -56,7 +56,7 @@ python -m lottery_ai --db data/lottery.db --with-dl
 
 ## 利用条件
 
-公式Webの自動取得・アクセス制限迂回は実装していません。CSVを手動入手し、利用条件を確認してから取り込んでください。UIにはロト6・NUMBERS4の項目も残していますが、現段階では**ロト7のみ**を扱います。出典のある実データがない状態で実当せん履歴を捏造しません。
+公式Webの自動取得・アクセス制限迂回は実装していません。CSVを手動入手し、利用条件を確認してから取り込んでください。出典のある実データがない状態で実当せん履歴を捏造しません。
 
 ## GitHub / Render
 
@@ -72,7 +72,7 @@ RenderのPython Web Service: build `pip install -r requirements.txt`, start `uvi
 - `LOTTERY_ADMIN_TOKEN` を使い、CSVからの永続DB登録を管理者に限定
 - Webの「DRAW HISTORY / CSV IMPORT」から初回全履歴／追加回を登録
 - `GET /api/health` と `GET /api/history/status` で登録件数・最新回・欠落回数を確認
-- MySQLでは20回未満のデータしかなければ**架空デモに自動で切替えない**
+- MySQLモードでは接続エラーや履歴不足を通知します。予測には80回以上の履歴が必要です。
 - 予測・3AI判定の結果を `prediction_runs` に保存
 
 CLIによるCSV初回取込と差分更新：
@@ -102,7 +102,16 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv
 - 登録用ファイルは`data/*.csv.gz`として保存し、SHA-256を照合。重複回号の再登録を防ぎ、既存値との不一致はロールバックする。
 - 初回のみRenderの`LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES=1`を設定して取込。成功後は`0`に戻す。
 - `GET /api/history/status/LOTO6`、`GET /api/history/status/NUMBERS4`で履歴件数を確認可能。
-- **予測・深層学習・3AI判定はまだLOTO7のみ**。2種類の予測対応は別タスク。
+- LOTO6・NUMBERS4は、過去の出現頻度とMLPの出力を組み合わせて候補を生成します。NUMBERS4は4桁の順序を保持するストレート形式です。
+- `POST /api/predict` の `game` に `LOTO7`、`LOTO6`、`NUMBERS4` を指定できます。既定は `LOTO7` です。LOTO7は候補の選定に3AI判定も使います。
+
+### 画面と音声操作
+
+- 「AIハロ起動」画面の最下部で「デバッグモード」を選べます。通常モードは3AI（ハロ）、SYSTEM TELEMETRY、TARGET LOTTERY、3-AI COMMS TERMINALを表示します。デバッグモードでは履歴のCSV取込、モデル評価、ハロと音声の調整も表示します。
+- TARGET LOTTERYでくじの種類と表示件数（1〜10通り）を選び、SCANを押すと履歴取得、データ解析、MLPの学習、候補生成を順番に行い、専用ウィンドウに表示します。「再表示」で直近の候補を開き直せます。
+- 音声認識対応ブラウザではデバッグモードで起動し、3-AI COMMS TERMINALの「マイクON」から「ナンバーズ4を3通り予測」のように指示すると、ハロが認識した種類と件数、候補番号を読み上げます。チャット欄からは通常モードでも同じコマンドを使えます。
+- 予測のウィンドウに履歴の出典と対象回号を表示します。「データ解析と学習の結果」で、本数字または桁別の出現回数とMLPの検証指標を確認できます。
+- ハロの上部には、起動後の経過時間に占める各ハロの発話時間を円グラフで表示します。
 
 詳細：[docs/loto6_numbers4_import.md](docs/loto6_numbers4_import.md)
 
@@ -128,7 +137,7 @@ python -m lottery_ai.cloud_import --csv loto7_history.csv
 提供された約2.03秒のゲーム録画を参考に、3体の耳を左右独立した開閉ハッチへ変更しました。
 発話中は**内部の歯車・駆動軸の露出、目の発光、頭部の小さな揺れ**が起こります。
 
-「HARO VOICE LINK」では、日本語音声のピッチ（初期値1.50）、話速（初期値1.25）、短いオリジナル電子音の有無を調整できます。「試聴」で確認し、設定をブラウザ内に保存します。
+デバッグモードの「3-AI COMMS TERMINAL」では、日本語音声のピッチ（初期値1.50）、話速（初期値1.25）、短いオリジナル電子音の有無を調整できます。「試聴」で確認し、設定をブラウザ内に保存します。
 Web Speech APIの発話開始・語句境界・終了に加え、語句境界イベントが使えないブラウザ用の近似同期もあります。
 **参考音源のゲームの声・楽曲・効果音は配布・埋め込みしていません。録画音声を完全複製する仕組みではありません。**
 解析値はBGM・効果音を含む混合音源に由来し、単独音声の声紋や正確な基本周波数ではありません。
