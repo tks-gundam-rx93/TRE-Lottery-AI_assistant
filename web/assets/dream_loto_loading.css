@@ -1,0 +1,65 @@
+/* 夢ロトくんに着想を得た、LOTO7専用SCANアニメーション。
+   アニメは表示演出であり、宝くじの実抽せんや当せん確率を再現しない。 */
+.dream-loto-loading {
+  position: fixed; inset: 0; z-index: 6000;
+  display: flex; align-items: center; justify-content: center;
+  overflow-y: auto; padding: 16px;
+  background: rgba(1,5,15,.91);
+  backdrop-filter: blur(7px);
+  color: #c9eeff;
+}
+.dream-loto-loading[hidden] { display: none !important; }
+.dream-loto-loading__panel {
+  position: relative; width: min(700px,100%); padding: 18px 18px 14px;
+  border: 1px solid #37d8e9;
+  border-radius: 14px; background: linear-gradient(155deg,#071b2a,#03101e 60%,#020711);
+  box-shadow: 0 0 36px #00e5ff30,inset 0 0 30px #00e5ff0b;
+  text-align: center;
+}
+.dream-loto-loading__title {
+  color: #83fbd9; font-size: clamp(16px,3.3vw,24px);
+  font-weight: 700; letter-spacing: 2px;
+  text-shadow: 0 0 12px #27efb455;
+}
+.dream-loto-loading__step { margin-top: 6px; color: #9fbaca; font-size: 12px; }
+.dream-loto-loading__machine {
+  position: relative; margin: 12px auto 7px; width: 100%;
+  border: 1px solid #34d9e725; border-radius: 10px;
+  background: radial-gradient(ellipse at 45% 39%,#103a4166,#020916 70%);
+  overflow: hidden;
+}
+.dream-loto-loading__canvas { display: block; width: 100%; height: auto; }
+.dream-loto-loading__track {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: clamp(5px,2vw,12px); min-height: 54px; margin: 7px auto;
+}
+.dream-loto-loading__ball {
+  display: flex; align-items: center; justify-content: center;
+  width: 43px; height: 43px; border: 2px solid #f1f8ff; border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%,#ffffff,#ffdc55 48%,#b67c05 95%);
+  color: #162032; font-weight: 800; font-size: 15px;
+  text-shadow: 0 1px #ffffff55;
+  box-shadow: 0 0 13px #ffdf7b50, inset -3px -4px 7px #935a1845;
+  animation: dream-loto-drop .36s cubic-bezier(.1,.7,.2,1.4) both;
+}
+.dream-loto-loading__slot {
+  display: flex; align-items: center; justify-content: center;
+  width: 43px; height: 43px; border: 1px dashed #368797; border-radius: 50%;
+  color: #487c93; font-size: 12px;
+}
+.dream-loto-loading__warning { line-height: 1.6; font-size: 11px; color: #b5c3ce; margin: 5px auto 0; }
+.dream-loto-loading__progress { color: #54dcef; font-size: 11px; margin-top: 9px; }
+@keyframes dream-loto-drop {
+  from { transform: translateY(-25px) scale(.4); opacity: 0; }
+  70% { transform: translateY(3px) scale(1.12); opacity: 1; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@media (max-width:560px) {
+  .dream-loto-loading { padding: 8px; }
+  .dream-loto-loading__panel { padding: 12px 8px; }
+  .dream-loto-loading__ball, .dream-loto-loading__slot { width: 31px; height: 31px; font-size: 12px; }
+  .dream-loto-loading__track { gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dream-loto-loading__ball { animation: none; }
+}
