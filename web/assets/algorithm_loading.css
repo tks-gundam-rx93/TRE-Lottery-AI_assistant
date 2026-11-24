@@ -1,0 +1,88 @@
+/* SCAN中に4つの候補生成アルゴリズムを同時可視化。
+ * 待機中の図は説明用イメージ、API応答後の番号だけが実計算結果。
+ */
+.dream-algorithms {
+  margin: 10px auto 8px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 7px;
+  text-align: left;
+}
+.dream-algorithms__card {
+  border: 1px solid #296b87;
+  background: linear-gradient(160deg,#0a2535dd,#061522dd);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 8px 8px 9px;
+  box-shadow: inset 0 0 12px #0de3f00d;
+  transition: border-color .2s ease;
+}
+.dream-algorithms__card[data-state="complete"] {
+  border-color: #50e9a2;
+  box-shadow: inset 0 0 15px #36ef941a,0 0 10px #30b4ff0e;
+}
+.dream-algorithms__card[data-state="skipped"] { opacity: .66; }
+.dream-algorithms__title {
+  display: flex; align-items: center; gap: 5px; min-width: 0;
+  color: #f1fcff; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+}
+.dream-algorithms__lamp {
+  flex: 0 0 7px; height: 7px; border-radius: 50%;
+  background: #23c2ed;
+  box-shadow: 0 0 7px #27dffc;
+  animation: dream-algorithms-pulse 1.3s ease-in-out infinite;
+}
+.dream-algorithms__card[data-state="complete"] .dream-algorithms__lamp {
+  animation: none; background: #69f7a9; box-shadow: 0 0 9px #69f7a9;
+}
+.dream-algorithms__card[data-state="skipped"] .dream-algorithms__lamp {
+  animation: none; background: #687c8d; box-shadow: none;
+}
+.dream-algorithms__subtitle {
+  color: #88b0c1; font-size: 9px; margin: 4px 0 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dream-algorithms__canvas {
+  width: 100%; height: 75px; display: block;
+}
+.dream-algorithms__state {
+  border-top: 1px solid #335263;
+  padding-top: 6px;
+  min-height: 25px;
+  color: #6ee7fa; font-size: 10px; font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere; line-height: 1.4;
+}
+.dream-algorithms__card[data-state="complete"] .dream-algorithms__state {
+  color: #9dffc6;
+}
+.dream-algorithms__note {
+  grid-column: 1/-1;
+  text-align: center;
+  color: #9bb5c4;
+  font-size: 10px;
+  padding: 0 2px;
+}
+@keyframes dream-algorithms-pulse {
+  0%,100% { opacity: .45; transform: scale(.7); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+@media (max-width: 560px) {
+  .dream-algorithms { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; margin: 7px auto; }
+  .dream-algorithms__card { padding: 6px; }
+  .dream-algorithms__canvas { height: 55px; }
+  .dream-algorithms__title { font-size: 10px; }
+  .dream-algorithms__subtitle { font-size: 9px; }
+  .dream-algorithms__state { font-size: 9px; }
+  .dream-loto-loading__machine { max-width: 475px; }
+}
+@media (min-width:561px) {
+  /* 画面下の解析タイルと7球レールがスクロールなしで見やすいように */
+  .dream-loto-loading__machine { max-width: 540px; }
+}
+@media (max-height: 760px) {
+  .dream-loto-loading { align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dream-algorithms__lamp { animation: none; }
+}
