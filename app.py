@@ -1,10 +1,11 @@
 """TRE-Lottery AI Assistant: 公開検証用のFastAPI。
 
-公開サイトはデモデータか、利用者が送信したCSVのセッションデータを使用する。
+登録済みのMySQL履歴、または同梱・取込CSVから予測する。
 サーバーがみずほ銀行を自動スクレイピングする機能は含まない。
 """
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 import json
@@ -12,12 +13,11 @@ import os
 import logging
 import hmac
 from pathlib import Path
-import random
 import tempfile
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -31,14 +31,21 @@ from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
 from lottery_ai.cloud_import import Loto7HistoryImporter
 from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
-from lottery_ai.additional_games import AdditionalGameArchive, AdditionalGameRepository
+from lottery_ai.additional_games import (
+    AdditionalGameArchive, AdditionalGameRepository, GameCode, Loto6Draw, Numbers4Draw,
+    generate_candidates,
+)
 
 
-class PredictRequest(BaseModel):
+class HistoryRequest(BaseModel):
+    game: Literal["LOTO7", "LOTO6", "NUMBERS4"] = "LOTO7"
+    session: str | None = None
+
+
+class PredictRequest(HistoryRequest):
     count: int = Field(default=5, ge=1, le=10)
     samples: int = Field(default=180, ge=30, le=1000)
     seed: int = Field(default=42, ge=0, le=1_000_000)
-    session: str | None = None
     judge: str = Field(default='rules', pattern='^(rules|llm)$')
 
 
@@ -74,25 +81,12 @@ class PredictionService:
     """データの由来と各方式の候補を一括管理するアプリケーションサービス。"""
     def __init__(self):
         self.sessions = SessionHistoryStore()
-        self.demo = self._make_demo(160)
         # 公開Render環境ではLOTTERY_DB_BACKEND=mysqlでTiDB Cloudへ接続する。
         # DBの資格情報はブラウザへ一切送信しない。
         self.mysql = (MySqlDrawRepository(MySqlSettings.from_env())
                       if os.getenv('LOTTERY_DB_BACKEND', 'memory').lower() == 'mysql' else None)
 
-    @staticmethod
-    def _make_demo(size: int) -> list[Draw]:
-        """UI動作確認専用の人工データ。実際の当せん結果ではない。"""
-        rng = random.Random(20261118)
-        return [Draw(i + 1, f'SYNTHETIC-{i+1}',
-            tuple(sorted(rng.sample(range(1, 38), 7))), ()) for i in range(size)]
-
     def history(self, session: str | None) -> tuple[list[Draw], str]:
-        if session:
-            history = self.sessions.get(session)
-            if history is None:
-                raise HTTPException(status_code=404, detail='セッションの有効期限が切れました。CSVを再登録してください')
-            return history, 'UPLOADED_CSV'
         if self.mysql is not None:
             try:
                 draws = self.mysql.all()
@@ -101,24 +95,104 @@ class PredictionService:
                     status_code=503,
                     detail='クラウドMySQLに接続できません。TiDB CloudとRender環境変数を確認してください'
                 ) from exc
-            if len(draws) < 20:
-                # 本番MySQLモードで架空の結果を混在させない。
-                raise HTTPException(
-                    status_code=409,
-                    detail=f'ロト7履歴が{len(draws)}件です。20回以上の実データCSVをDBに取り込んでください'
-                )
+            if not draws:
+                raise HTTPException(status_code=409, detail='MySQLにLOTO7の履歴が登録されていません')
             return draws, 'MYSQL'
-        return self.demo, 'SYNTHETIC_DEMO'
+        if session:
+            history = self.sessions.get(session)
+            if history is None:
+                raise HTTPException(status_code=404, detail='セッションの有効期限が切れました。CSVを再登録してください')
+            return history, 'UPLOADED_CSV'
+        return CsvDrawLoader().load(Loto7HistoryBootstrap.FILE), 'BUNDLED_CSV'
+
+    def additional_history(self, game: GameCode) -> tuple[list[Loto6Draw] | list[Numbers4Draw], str]:
+        if self.mysql is not None:
+            try:
+                draws = AdditionalGameRepository(self.mysql).all(game)
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail='クラウドMySQLから履歴を取得できません') from exc
+            if not draws:
+                raise HTTPException(status_code=409, detail=f'MySQLに{game}の履歴が登録されていません')
+            return draws, 'MYSQL'
+        return AdditionalGameArchive().load(game), 'BUNDLED_CSV'
+
+    @staticmethod
+    def frequency_counts(
+        game: str, history: list[Draw] | list[Loto6Draw] | list[Numbers4Draw],
+    ) -> list[Counter[int]]:
+        if game == 'NUMBERS4':
+            return [Counter(int(draw.winning_number[i]) for draw in history) for i in range(4)]
+        return [Counter(number for draw in history for number in draw.numbers)]
+
+    @staticmethod
+    def frequency_summary(game: str, counts: list[Counter[int]]) -> list[list[tuple[str, int]]]:
+        width = 1 if game == 'NUMBERS4' else 2
+        return [[(str(number).zfill(width), count) for number, count in group.most_common(5)]
+                for group in counts]
+
+    @staticmethod
+    def train_model(game: str, history: list[Draw] | list[Loto6Draw] | list[Numbers4Draw],
+                    seed: int = 42) -> NumpyDeepForecaster:
+        if len(history) < 80:
+            raise HTTPException(status_code=409, detail=f'{game}のディープラーニングには80回以上の履歴が必要です')
+        model = NumpyDeepForecaster(seed=seed, epochs=45)
+        if game == 'LOTO7':
+            model.fit(history)
+        else:
+            model.fit_additional(game, history)
+        return model
+
+    def inspect_history(self, req: HistoryRequest, *, train: bool) -> dict[str, Any]:
+        history, source = (self.history(req.session) if req.game == 'LOTO7'
+                           else self.additional_history(req.game))
+        result = {
+            'game': req.game, 'mode': source, 'history_count': len(history),
+            'first_draw': history[0].draw_no, 'last_draw': history[-1].draw_no,
+        }
+        if train:
+            return dict(result, training=asdict(self.train_model(req.game, history).report))
+
+        counts = self.frequency_counts(req.game, history)
+        return dict(result, frequencies=self.frequency_summary(req.game, counts))
 
     def predict(self, req: PredictRequest) -> dict[str, Any]:
-        history, source = self.history(req.session)
+        history, source = (self.history(req.session) if req.game == 'LOTO7'
+                           else self.additional_history(req.game))
+        counts = self.frequency_counts(req.game, history)
+        analysis = self.frequency_summary(req.game, counts)
+        model = self.train_model(req.game, history, req.seed)
+        result = {
+            'game': req.game, 'mode': source, 'history_count': len(history),
+            'first_draw': history[0].draw_no, 'last_draw': history[-1].draw_no,
+            'target_draw': history[-1].draw_no + 1,
+            'generated_at': datetime.now(timezone.utc).isoformat(),
+            'frequencies': analysis, 'training': asdict(model.report),
+            'warning': '候補は統計・学習に基づきます。公平な抽せんでは各組み合わせの確率は等しくなります。',
+        }
+        if req.game == 'LOTO7':
+            result.update(self.rank_loto7(req, history, model))
+        else:
+            scores = model.predict_additional(req.game, history)
+            picks = generate_candidates(req.game, counts, scores, req.count, req.seed)
+            result.update(candidates=[
+                {'candidate_id': f'SET-{i:02d}', 'numbers': numbers, 'method': '出現頻度＋MLP'}
+                for i, numbers in enumerate(picks, 1)
+            ], debate=None)
+        if self.mysql is not None and req.game == 'LOTO7':
+            try:
+                result['prediction_run_id'] = self.mysql.save_prediction(result)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail='予測履歴をMySQLに保存できませんでした。DBを確認してください'
+                ) from exc
+        return result
+
+    def rank_loto7(self, req: PredictRequest, history: list[Draw],
+                   model: NumpyDeepForecaster) -> dict[str, Any]:
         analyzer = HistoryAnalyzer(history)
-        strategies = [FrequencyStrategy(), GapPairStrategy(), MonteCarloStrategy()]
-        training = None
-        if len(history) >= 80:
-            model = NumpyDeepForecaster(seed=req.seed, epochs=45)
-            training = asdict(model.fit(history))
-            strategies.append(DeepLearningStrategy(model.predict(history)))
+        strategies = [FrequencyStrategy(), GapPairStrategy(), MonteCarloStrategy(),
+                      DeepLearningStrategy(model.predict(history))]
         candidates: list[Candidate] = []
         for idx, strat in enumerate(strategies):
             candidates.extend(strat.generate(analyzer, req.samples, max(3, req.count),
@@ -139,27 +213,10 @@ class PredictionService:
                 picked.append(item)
             if len(picked) == req.count:
                 break
-        # 同方式だけに偏った場合も候補には方式ラベルを残す。
-        result = {
-            'game': 'LOTO7', 'mode': source, 'last_draw': history[-1].draw_no if source != 'SYNTHETIC_DEMO' else None,
-            'target_draw': history[-1].draw_no + 1 if source != 'SYNTHETIC_DEMO' else None,
-            'history_count': len(history), 'generated_at': datetime.now(timezone.utc).isoformat(),
+        return {
             'candidates': [dict(c.as_dict(), votes=votes[c.candidate_id]) for c in picked],
             'all_candidates': [c.as_dict() for c in candidates], 'debate': debate.as_dict(),
-            'training': training, 'warning': (
-                '架空の抽せん履歴を使った機能デモです。実際の当せん番号予測ではありません。'
-                if source == 'SYNTHETIC_DEMO' else
-                '統計・学習・得票スコアは当せん確率ではありません。公平な抽せんなら全組み合わせの確率は等しい。'),
         }
-        if self.mysql is not None:
-            try:
-                result['prediction_run_id'] = self.mysql.save_prediction(result)
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail='予測履歴をMySQLに保存できませんでした。DBを確認してください'
-                ) from exc
-        return result
 
 
 service = PredictionService()
@@ -281,8 +338,8 @@ def health():
             db_state = 'unavailable'
             db_error_type = type(exc).__name__
             db_error_code = _safe_db_error_code(exc)
-    history_mode = ('MYSQL' if db_state == 'connected' and summary['count'] >= 20
-                    else 'MYSQL_WAITING' if service.mysql is not None else 'SYNTHETIC_DEMO')
+    history_mode = ('MYSQL' if db_state == 'connected' and summary['count'] >= 80
+                    else 'MYSQL_WAITING' if service.mysql is not None else 'BUNDLED_CSV')
     return {'status': 'ok', 'game': 'LOTO7', 'history_mode': history_mode,
             'database': {'backend': 'mysql' if service.mysql is not None else 'memory',
                          'status': db_state, 'draw_count': summary['count'],
@@ -319,7 +376,8 @@ def additional_history_status(game: str):
     if game not in ("LOTO6", "NUMBERS4"):
         raise HTTPException(status_code=404, detail="未対応の宝くじ種類です")
     if service.mysql is None:
-        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0}
+        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0,
+                'prediction_available': True}
     try:
         stats = AdditionalGameRepository(service.mysql).stats(game)
     except Exception as exc:
@@ -333,7 +391,7 @@ def additional_history_status(game: str):
         'last_draw': stats['last_draw'],
         'missing_count': stats['missing_count'],
         'dates_available': stats['dates_available'],
-        'prediction_available': False,
+        'prediction_available': stats['count'] >= 80,
     }
 
 
@@ -371,7 +429,7 @@ async def upload_csv(request: Request):
     finally:
         Path(filepath).unlink(missing_ok=True)
     if service.mysql is None and len(draws) < 20:
-        raise HTTPException(status_code=422, detail='デモ予測には20回以上の履歴が必要です')
+        raise HTTPException(status_code=422, detail='セッションに登録するには20回以上の履歴が必要です')
     if service.mysql is not None:
         try:
             inserted = service.mysql.upsert(draws, 'CSV')
@@ -398,3 +456,13 @@ async def upload_csv(request: Request):
 @app.post('/api/predict')
 def predict(request: PredictRequest):
     return service.predict(request)
+
+
+@app.post('/api/analysis')
+def analyze_history(request: HistoryRequest):
+    return service.inspect_history(request, train=False)
+
+
+@app.post('/api/train')
+def train_on_history(request: HistoryRequest):
+    return service.inspect_history(request, train=True)

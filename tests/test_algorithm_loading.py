@@ -20,13 +20,15 @@ def test_four_strategy_visual_assets_and_scan_lifecycle():
     assert html.index('src="/assets/dream_loto_loading.js"') < html.index(
         'src="/assets/algorithm_loading.js"'
     )
-    assert "window.dreamLotoLoader.show();window.dreamLotoAlgorithms.begin()" in html
-    assert "window.dreamLotoAlgorithms.resolve(d);" in html
-    assert "await window.dreamLotoLoader.reveal(d.candidates[0].numbers)" in html
-    assert "finally{window.dreamLotoAlgorithms.end();window.dreamLotoLoader.hide()" in html
-    assert "fetch('/api/predict'" in html
-    assert "renderPrediction(d)" in html
-    assert "openLoto7Modal()" in html
+    scan = html.split("async function scanLottery(", 1)[1].split("function setLotteryBusy(", 1)[0]
+    assert "const algorithms=loader?window.dreamLotoAlgorithms:null" in scan
+    assert scan.index("loader?.show()") < scan.index("algorithms?.begin()")
+    assert scan.index("requestLottery('/api/predict',game,{") < scan.index("algorithms?.resolve(data)")
+    assert scan.index("algorithms?.resolve(data)") < scan.index("await loader.reveal(data.candidates[0].numbers)")
+    cleanup = scan.split("}finally{", 1)[1]
+    assert "algorithms?.end()" in cleanup
+    assert "loader?.hide()" in cleanup
+    assert "setLotteryBusy(false)" in cleanup
 
 
 def test_four_algorithms_have_distinct_visualizations_and_labeled_modes():

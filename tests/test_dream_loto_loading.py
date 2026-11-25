@@ -17,14 +17,14 @@ def test_loading_assets_are_published_and_wired_into_scan():
     assert SCRIPT.is_file() and STYLE.is_file()
     assert '<script src="/assets/dream_loto_loading.js"></script>' in html
     assert '<link rel="stylesheet" href="/assets/dream_loto_loading.css">' in html
-    assert "window.dreamLotoLoader.show()" in html
-    assert "await window.dreamLotoLoader.reveal(d.candidates[0].numbers)" in html
-    assert "window.dreamLotoLoader.hide();btn.disabled=false" in html
-    # 既存API・予測リクエスト・5候補出力を変更しないこと。
-    assert "fetch('/api/predict'" in html
-    assert "body:JSON.stringify({count:5,samples:180" in html
-    assert "renderPrediction(d)" in html
-    assert "openLoto7Modal()" in html
+    assert "const loader=game==='LOTO7'?window.dreamLotoLoader:null" in html
+    assert "loader?.show()" in html
+    assert "await loader.reveal(data.candidates[0].numbers)" in html
+    assert "loader?.hide()" in html
+    assert "requestLottery('/api/predict',game,{" in html
+    assert "count,samples:180" in html
+    assert "renderPrediction(data)" in html
+    assert "openPredictionModal()" in html
 
 
 def test_scan_animation_exposes_clear_non_real_draw_disclaimer_and_validates_api_result():
