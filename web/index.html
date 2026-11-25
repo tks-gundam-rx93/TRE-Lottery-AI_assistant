@@ -15,6 +15,18 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 <style>
+/* PWA: 「AIハロ起動」前の単独ボタン表示を維持し、起動後だけ案内する。 */
+.pwa-banner[hidden]{display:none!important}
+.pwa-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center;
+  padding:10px 13px;background:#0b2540;border-bottom:1px solid #287d9b;color:#dff6ff}
+.pwa-banner .pwa-label{font-size:11px;line-height:1.5;flex:1;min-width:200px}
+.pwa-banner button{background:#0c4a67;color:#f0ffff;border:1px solid #3fb5d9;border-radius:6px;
+ padding:8px 12px;cursor:pointer;font-weight:bold}
+.pwa-banner button:focus-visible{outline:2px solid #fff}
+.pwa-banner .pwa-close{border-color:transparent;background:transparent;color:#99c3d8}
+@media(max-width:560px){.pwa-banner{padding:7px 10px;gap:6px}.pwa-banner .pwa-label{font-size:10px}}
+</style>
+<style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
 :root{--bg:#050811;--cyan:#00e5ff;--green:#00ff66;--orange:#ff870e;--blue:#3475ff;--panel:rgba(5,15,30,.93);--border:rgba(0,229,255,.33)}
@@ -97,19 +109,6 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
  .haro-method-note{font-size:9px}
  .haro-scene .haro-speaking-indicator{font-size:9px}
 }
-
-</style>
-<style>
-/* PWA: 「AIハロ起動」前の単独ボタン表示を維持し、起動後だけ案内する。 */
-.pwa-banner[hidden]{display:none!important}
-.pwa-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center;
-  padding:10px 13px;background:#0b2540;border-bottom:1px solid #287d9b;color:#dff6ff}
-.pwa-banner .pwa-label{font-size:11px;line-height:1.5;flex:1;min-width:200px}
-.pwa-banner button{background:#0c4a67;color:#f0ffff;border:1px solid #3fb5d9;border-radius:6px;
- padding:8px 12px;cursor:pointer;font-weight:bold}
-.pwa-banner button:focus-visible{outline:2px solid #fff}
-.pwa-banner .pwa-close{border-color:transparent;background:transparent;color:#99c3d8}
-@media(max-width:560px){.pwa-banner{padding:7px 10px;gap:6px}.pwa-banner .pwa-label{font-size:10px}}
 </style>
 </head>
 <body class="boot-locked">
