@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TRE-Lottery AI Assistant | HARO-X3</title>
+<link rel="stylesheet" href="/assets/dream_loto_loading.css">
+<link rel="stylesheet" href="/assets/algorithm_loading.css">
 <!-- PWA: iOSホーム画面・Android/Chromeインストールに必要なメタデータ。 -->
 <meta name="theme-color" content="#071829">
 <meta name="description" content="ロト7の分析・3AI判定・ハロ型音声UIを楽しめるTRE Lottery AI Assistant">
@@ -11,9 +14,6 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
-<title>TRE-Lottery AI Assistant | HARO-X3</title>
-<link rel="stylesheet" href="/assets/dream_loto_loading.css">
-<link rel="stylesheet" href="/assets/algorithm_loading.css">
 <style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
@@ -98,6 +98,8 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
  .haro-scene .haro-speaking-indicator{font-size:9px}
 }
 
+</style>
+<style>
 /* PWA: 「AIハロ起動」前の単独ボタン表示を維持し、起動後だけ案内する。 */
 .pwa-banner[hidden]{display:none!important}
 .pwa-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center;
@@ -117,14 +119,14 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 </div>
 <!-- TRE-UI: ステータスはAPI接続／解析状況に応じてJavaScriptから更新。 -->
 <header><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
+<!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
+<!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <!-- PWA: iOSはブラウザからの自動インストールができないため、正しい手順を表示する。 -->
 <aside class="pwa-banner" id="pwa-banner" hidden aria-label="ホーム画面への追加">
   <span class="pwa-label" id="pwa-install-message">このアプリをホーム画面から起動できます。</span>
   <button type="button" id="pwa-install-action" onclick="pwaInstaller.install()">追加方法を見る</button>
   <button type="button" class="pwa-close" onclick="pwaInstaller.dismiss()" aria-label="案内を閉じる">×</button>
 </aside>
-<!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
-<!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
 <!-- HARO VECTOR STAGE: 添付画像は設計資料のみ。キャラクターはすべて独立したインラインSVGで描画する。 -->
 <!-- HARO METHOD 1: GIFの8フレームをそのまま使う方式。待機中は必ず耳を閉じたWebP静止画。 -->
 <section class="stage gif-stage" aria-label="緑・オレンジ・紫の3AIハロ型ユニット GIFアニメーション">

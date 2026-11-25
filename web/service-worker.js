@@ -46,7 +46,7 @@ self.addEventListener('fetch', event => {
   // Online-only requests fail naturally; the UI handles an offline API error.
   if (url.pathname.startsWith('/api/')) return;
 
-  if (event.request.mode === 'navigate') {
+  if (event.request.mode === 'navigate' && url.pathname === '/') {
     // Fetch the latest page when online; reuse last known shell when offline.
     event.respondWith(
       fetch(event.request).then(response => {

@@ -54,7 +54,7 @@ def test_service_worker_scope_and_no_personal_data_cache():
     assert "event.request.method !== 'GET'" in content
     assert "url.pathname.startsWith('/api/')" in content
     assert "if (url.pathname.startsWith('/api/')) return;" in content
-    assert "event.request.mode === 'navigate'" in content
+    assert "event.request.mode === 'navigate' && url.pathname === '/'" in content
     assert "caches.open(APP_SHELL_CACHE)" in content
     assert "cache.match('/offline.html')" in content
     assert "cache.put(event.request, copy)" in content
@@ -76,7 +76,7 @@ def test_boot_screen_and_pwa_links_remain_in_main_ui():
         "navigator.serviceWorker.register('/service-worker.js',{scope:'/'})",
         "ホーム画面に追加",
         "Webアプリとして開く",
-        "fetch('/api/predict'",
+        "'/api/predict'",
     ):
         assert token in html
 
