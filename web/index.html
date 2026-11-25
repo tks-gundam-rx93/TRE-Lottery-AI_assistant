@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TRE-THESAURUS By AIハローX3</title>
+<link rel="stylesheet" href="/assets/dream_loto_loading.css">
+<link rel="stylesheet" href="/assets/algorithm_loading.css">
 <style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
@@ -273,6 +275,8 @@ body:not(.debug-mode) .debug-only{display:none}
 </dialog>
 <!-- TRE-UI: 本サービスは統計・深層学習の研究・検証用途。 -->
 <div class="footer debug-only">TRE-Lottery AI Assistant / HARO-X3 / Statistical & Deep Learning Research</div>
+<script src="/assets/dream_loto_loading.js"></script>
+<script src="/assets/algorithm_loading.js"></script>
 <script>
 /** TRE-UI: 厳格モードで暗黙のグローバル変数生成を防止。 */
 'use strict';
@@ -382,15 +386,21 @@ async function scanLottery({readAll=false}={}){
   if(btn.disabled)return;
   const game=$('lottery-select').value.toUpperCase();
   const count=Number($('prediction-count').value);
+  const loader=game==='LOTO7'?window.dreamLotoLoader:null;
+  const algorithms=loader?window.dreamLotoAlgorithms:null;
   setLotteryBusy(true);
   const cycle=++voiceAssistant.readCycle;
   $('mlp-val').textContent='BUSY';
   $('lottery-result-area').textContent=game+' の履歴を解析・学習し、候補を生成しています…';
   const start=performance.now();
   try{
+    loader?.show();
+    algorithms?.begin();
     const data=await requestLottery('/api/predict',game,{
       count,samples:180,seed:Math.floor(Math.random()*1000000),judge:'rules'
     });
+    algorithms?.resolve(data);
+    if(loader)await loader.reveal(data.candidates[0].numbers);
     renderPrediction(data);
     updateLotteryTelemetry(data,start);
     $('lottery-result-area').textContent='予測が完了しました。';
@@ -406,6 +416,8 @@ async function scanLottery({readAll=false}={}){
     }
     return;
   }finally{
+    algorithms?.end();
+    loader?.hide();
     setLotteryBusy(false);
   }
   if(!voiceAssistant.awake||!$('voice-output').checked||voiceAssistant.readCycle!==cycle)return;
