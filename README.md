@@ -150,3 +150,14 @@ GIFはユーザーが承認した3体のハロの8フレーム原画です。UI�
 - 本分岐は新規PRで元の開発ブランチと比較可能です。`main`には自動マージしません
 
 詳細：[docs/haro_v1_gif_playback.md](docs/haro_v1_gif_playback.md)
+
+## PWA（ホーム画面から起動）
+
+`main` を基準に、iPhone・Android・PCのホーム画面から起動できるPWAを追加するブランチがあります。
+アプリ名は **TRE Lottery**。ハロ3体のアイコン、スタンドアロン表示、静的画面のオフライン表示を提供します。
+音声・統計解析・MySQL・APIの既存機能は維持し、予測データをService Workerでキャッシュしません。
+
+**iPhoneの登録方法：** SafariでPWAのHTTPS公開URLを開き、「共有」→「ホーム画面に追加」→（表示される場合）「Webアプリとして開く」をオン→「追加」。
+iOSのホーム画面への配置は本人が端末上で行う操作であり、サーバー側から自動実行はできません。
+
+手順・仕様： [docs/pwa_install_iphone.md](docs/pwa_install_iphone.md)

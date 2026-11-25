@@ -1,10 +1,31 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TRE-Lottery AI Assistant | HARO-X3</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TRE-THESAURUS By AIハローX3</title>
 <link rel="stylesheet" href="/assets/dream_loto_loading.css">
 <link rel="stylesheet" href="/assets/algorithm_loading.css">
+<!-- PWA: iOSホーム画面・Android/Chromeインストールに必要なメタデータ。 -->
+<meta name="theme-color" content="#071829">
+<meta name="description" content="ロト7の分析・3AI判定・ハロ型音声UIを楽しめるTRE Lottery AI Assistant">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TRE Lottery">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<style>
+/* PWA: 「AIハロ起動」前の単独ボタン表示を維持し、起動後だけ案内する。 */
+.pwa-banner[hidden]{display:none!important}
+.pwa-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center;
+  padding:10px 13px;background:#0b2540;border-bottom:1px solid #287d9b;color:#dff6ff}
+.pwa-banner .pwa-label{font-size:11px;line-height:1.5;flex:1;min-width:200px}
+.pwa-banner button{background:#0c4a67;color:#f0ffff;border:1px solid #3fb5d9;border-radius:6px;
+ padding:8px 12px;cursor:pointer;font-weight:bold}
+.pwa-banner button:focus-visible{outline:2px solid #fff}
+.pwa-banner .pwa-close{border-color:transparent;background:transparent;color:#99c3d8}
+@media(max-width:560px){.pwa-banner{padding:7px 10px;gap:6px}.pwa-banner .pwa-label{font-size:10px}}
+</style>
 <style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
@@ -99,6 +120,12 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <header><strong>◆ TRE-Lottery 3-AI TERMINAL [HARO-X3]</strong><span id="system-status-badge" role="status">CONNECTING</span></header>
 <!-- TRE-UI: 3体のハロから担当AIを選択できるUI。 -->
 <!-- ARTWORK: ユーザー承認済みの最終デザイン画（開いた耳＋閉じた耳の対比）を実際のUIに表示。 -->
+<!-- PWA: iOSはブラウザからの自動インストールができないため、正しい手順を表示する。 -->
+<aside class="pwa-banner" id="pwa-banner" hidden aria-label="ホーム画面への追加">
+  <span class="pwa-label" id="pwa-install-message">このアプリをホーム画面から起動できます。</span>
+  <button type="button" id="pwa-install-action" onclick="pwaInstaller.install()">追加方法を見る</button>
+  <button type="button" class="pwa-close" onclick="pwaInstaller.dismiss()" aria-label="案内を閉じる">×</button>
+</aside>
 <!-- HARO VECTOR STAGE: 添付画像は設計資料のみ。キャラクターはすべて独立したインラインSVGで描画する。 -->
 <!-- HARO METHOD 1: GIFの8フレームをそのまま使う方式。待機中は必ず耳を閉じたWebP静止画。 -->
 <section class="stage gif-stage" aria-label="緑・オレンジ・紫の3AIハロ型ユニット GIFアニメーション">
@@ -894,5 +921,79 @@ function bootHaroSystem(){
   haroSpeech.say(startupMessage,'orange');
   void initializeHaroSystem();
 }
+
+/**
+ * PWAのインストール案内。Chrome系はブラウザのネイティブインストール、
+ * iOS/Safariは手動で共有メニューからホーム画面へ追加する。
+ * iPhoneのホーム画面アイコンを外部から勝手に作成することはできない。
+ */
+class PwaInstallController {
+  constructor(){
+    this.promptEvent=null;
+    this.banner=$('pwa-banner');
+    this.message=$('pwa-install-message');
+    this.button=$('pwa-install-action');
+    this.ios=/iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    this.standalone=window.matchMedia('(display-mode: standalone)').matches ||
+      navigator.standalone===true;
+  }
+  init(){
+    if(this.standalone)return;
+    if(this.ios){
+      this.banner.hidden=false;
+      this.message.textContent='iPhoneのホーム画面にTRE Lotteryを追加できます。';
+      this.button.textContent='追加手順を表示';
+    }
+    window.addEventListener('beforeinstallprompt',event=>{
+      event.preventDefault();
+      this.promptEvent=event;
+      this.banner.hidden=false;
+      this.message.textContent='TRE Lotteryをアプリとしてインストールできます。';
+      this.button.textContent='インストール';
+    });
+    window.addEventListener('appinstalled',()=>{
+      this.promptEvent=null;
+      this.banner.hidden=true;
+    });
+    // 一度閉じた案内は同じタブ内で再表示しない。
+    if(sessionStorage.getItem('tre-pwa-install-dismissed')==='yes')this.banner.hidden=true;
+  }
+  async install(){
+    if(this.promptEvent){
+      const event=this.promptEvent;
+      this.promptEvent=null;
+      await event.prompt();
+      // 選択結果の詳細な扱いはブラウザに任せる。ユーザーの操作なしに「完了」と表示しない。
+      const choice=await event.userChoice;
+      if(choice?.outcome==='accepted')this.banner.hidden=true;
+      else this.button.textContent='インストール';
+      return;
+    }
+    if(this.ios){
+      this.message.textContent='Safariで共有（四角から上矢印）→「ホーム画面に追加」→「Webアプリとして開く」をオン→「追加」。';
+      this.button.textContent='Safariの共有メニューで追加';
+      this.button.disabled=true;
+    }else{
+      this.message.textContent='ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選択してください。';
+    }
+  }
+  dismiss(){
+    this.banner.hidden=true;
+    sessionStorage.setItem('tre-pwa-install-dismissed','yes');
+  }
+}
+const pwaInstaller=new PwaInstallController();
+pwaInstaller.init();
+
+/** Service WorkerをHTTPS/localhostで登録し、静的UIだけをキャッシュする。 */
+window.addEventListener('load',async()=>{
+  if(!('serviceWorker' in navigator) || !window.isSecureContext)return;
+  try {
+    await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
+  } catch(error) {
+    console.warn('TRE PWA: Service Worker registration failed', error);
+  }
+});
 </script>
 </body></html>

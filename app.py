@@ -170,6 +170,38 @@ app = FastAPI(title='TRE-Lottery AI Assistant', version='0.1.0')
 app.mount('/assets', StaticFiles(directory=Path(__file__).parent / 'web' / 'assets'), name='haro-assets')
 
 
+# PWAの公開ファイルをルートURLから配信する（Service Workerのスコープは /）。
+# APIやDBへアクセスさせず、通常のWeb画面と同じHTTPSオリジンでインストールする。
+app.mount('/icons', StaticFiles(directory=Path(__file__).parent / 'web' / 'icons'), name='pwa-icons')
+
+
+@app.get('/manifest.webmanifest', include_in_schema=False)
+def pwa_manifest():
+    return FileResponse(
+        Path(__file__).parent / 'web' / 'manifest.webmanifest',
+        media_type='application/manifest+json',
+        headers={'Cache-Control': 'no-cache'}
+    )
+
+
+@app.get('/service-worker.js', include_in_schema=False)
+def pwa_service_worker():
+    # SW更新を検出できるよう、スクリプトだけはキャッシュさせない。
+    return FileResponse(
+        Path(__file__).parent / 'web' / 'service-worker.js',
+        media_type='application/javascript',
+        headers={'Cache-Control': 'no-cache, no-store, must-revalidate'}
+    )
+
+
+@app.get('/offline.html', include_in_schema=False)
+def pwa_offline_page():
+    return FileResponse(
+        Path(__file__).parent / 'web' / 'offline.html',
+        media_type='text/html; charset=utf-8'
+    )
+
+
 @app.on_event("startup")
 def import_verified_loto7_history_on_startup() -> None:
     """管理者が明示的に有効化したときのみ、第1～703回を初回投入する。
