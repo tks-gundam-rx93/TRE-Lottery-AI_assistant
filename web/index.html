@@ -12,6 +12,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 <title>TRE-Lottery AI Assistant | HARO-X3</title>
+<link rel="stylesheet" href="/assets/dream_loto_loading.css">
+<link rel="stylesheet" href="/assets/algorithm_loading.css">
 <style>
 /* TRE-UI: 画面全体のHUDテーマ。スタイル指定のみを担当し、予測処理とは分離。 */
 /* TRE-UI: 共通の色変数（背景・ハロ・パネル・枠線）を定義。 */
@@ -165,7 +167,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <!-- TRE-UI: 架空のCPU/GPU負荷は表示せず、API関連の実用状態を表示。 -->
 <section class="panel"><h2>SYSTEM TELEMETRY <small id="telemetry-clock">--:--:--</small></h2><div class="telemetry"><div class="meter"><label>API STATUS</label><strong id="api-val">—</strong><div class="bar"></div></div><div class="meter"><label>CSV HISTORY</label><strong id="hist-val">—</strong><div class="bar"></div></div><div class="meter"><label>MLP TRAIN</label><strong id="mlp-val">—</strong><div class="bar"></div></div><div class="meter"><label>API LATENCY</label><strong id="ping-val">—</strong><div class="bar"></div></div></div></section>
 <!-- TRE-UI: 予測対象と実行ボタン。現時点の予測機能はLOTO7のみ対応。 -->
-<section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（未実装）</option><option value="numbers4">NUMBERS4（未実装）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
+<section class="panel"><h2>TARGET LOTTERY <small>LOTO7 / 5-PATTERN MATRIX</small></h2><div class="controls"><select id="lottery-select" onchange="onLotteryChange()" aria-label="宝くじ種類"><option value="loto7">LOTO7 (1〜37 / 7個 × 5通り)</option><option value="none">-- くじ選択 --</option><option value="loto6">LOTO6（履歴DB対応・予測は準備中）</option><option value="numbers4">NUMBERS4（履歴DB対応・予測は準備中）</option></select><button class="btn orange" id="scan-btn" onclick="scanLottery()">SCAN 予想</button><button class="btn" onclick="openLoto7Modal()">5通り表示</button></div><div class="result" id="lottery-result-area">SCANで候補を生成。実データ未登録の場合は架空データによるデモです。</div></section>
 
 <!-- VOICE: ブラウザのマイク許可を得て「おーい、ハロ」を待ち受ける。 -->
 <section class="panel voice-panel" aria-labelledby="voice-heading">
@@ -200,7 +202,7 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 </section>
 
 <!-- TRE-UI: 当せん履歴CSVのアップロードとデモモードへの切替操作。 -->
-<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>LOTO7 ONLY</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1,n2,n3,n4,n5,n6,n7（b1,b2は任意）。自動Web取得は行いません。</div></section>
+<section class="panel"><h2>DRAW HISTORY / CSV IMPORT <small>3 GAMES / LOTO7 UPLOAD</small></h2><div class="upload"><input id="csv-input" type="file" accept=".csv,text/csv" aria-label="履歴CSVを選択"><label id="csv-admin-wrap" style="display:none;align-items:center;gap:6px;font-size:11px">DB管理者トークン <input id="csv-admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="取込用トークン" aria-label="MySQLへの書き込みに必要な管理者トークン"></label><button class="btn" onclick="uploadCsv()">CSV取込</button><button class="btn" onclick="resetDemo()">デモに戻す</button></div><div class="note" id="db-status" role="status">DB状態：起動ボタン押下後に確認します。</div><div class="note" id="other-game-history-status" role="status">LOTO6 / NUMBERS4：履歴件数を確認中。</div><div class="note warning" id="csv-status">履歴未登録。架空160回分で機能デモを実行できます。</div><div class="note">CSV列: draw_no,draw_date,n1〜n7（b1,b2は任意）。クラウドMySQLでの取込には管理者トークンが必要です。既存回は重複登録せず、新しい回だけ追加します。</div></section>
 <!-- TRE-UI: MLPの検証結果、3AIの初回判定と反論・再判定を表示。 -->
 <section class="panel"><h2>3-AI REVIEW / MODEL EVALUATION <small>RULE BASED • LLM OPTIONAL</small></h2><pre class="report" id="ai-verdict-details">SCANを実行するとLOGOS・CHAOS・NEMESISの独立判定と再判定、MLPの検証指標を表示します。</pre></section>
 <!-- TRE-UI: 操作案内チャット。LLMによる自由会話ではない。 -->
@@ -210,6 +212,8 @@ body.boot-locked > :not(#boot-screen):not(script) {display:none !important;}
 <div class="modal" id="loto7-modal" onclick="if(event.target===this)closeLoto7Modal()" role="dialog" aria-modal="true" aria-label="ロト7の候補5通り"><div class="window"><div class="window-title"><span>◆ LOTO7 予測演算ウィンドウ [5 PATTERNS]</span><button class="btn" onclick="closeLoto7Modal()">× 閉じる</button></div><div class="window-body"><div class="note" id="modal-timestamp">未演算</div><div id="loto7-5patterns-container"></div><div class="legend">01-05 白 ・06-10 黄 ・11-15 緑 ・16-20 赤 ・21-25 青 ・26-30 桃 ・31-37 紫</div><div class="controls"><button class="btn orange" onclick="scanLottery()">↻ 再演算</button><button class="btn" onclick="closeLoto7Modal()">メイン画面へ戻る</button></div></div></div></div>
 <!-- TRE-UI: 本サービスは統計・深層学習の研究・検証用途。 -->
 <div class="footer">TRE-Lottery AI Assistant / HARO-X3 / Statistical & Deep Learning Research</div>
+<script src="/assets/dream_loto_loading.js"></script>
+<script src="/assets/algorithm_loading.js"></script>
 <script>
 /** TRE-UI: 厳格モードで暗黙のグローバル変数生成を防止。 */
 'use strict';
@@ -243,23 +247,51 @@ function closeLoto7Modal(){$('loto7-modal').classList.remove('open')}
 /** TRE-UI: APIレスポンスから候補番号・抽出法・投票数・モデル評価・3AI再判定を描画。 */
 function renderPrediction(d){currentData=d;const modal=$('loto7-5patterns-container');const bar=$('lottery-result-area');modal.replaceChildren();bar.replaceChildren();d.candidates.forEach((c,i)=>{const row=document.createElement('div');row.className='pattern';const name=document.createElement('strong');name.textContent='SET-'+String(i+1).padStart(2,'0');const balls=document.createElement('div');balls.className='ballbox';c.numbers.forEach(n=>balls.appendChild(ball(n)));const hint=document.createElement('small');hint.textContent=c.method+' / '+c.votes+'票';row.append(name,balls,hint);modal.appendChild(row)});if(d.candidates.length){const label=document.createElement('span');label.textContent='SET-01: ';label.style.color='var(--orange)';bar.appendChild(label);d.candidates[0].numbers.forEach(n=>bar.appendChild(ball(n)))}const demo=d.mode==='SYNTHETIC_DEMO';const mode=document.createElement('span');mode.textContent=demo?' [架空データのデモ]':' [CSV第'+d.last_draw+'回まで]';mode.style.color=demo?'#ffc078':'#00ffcc';bar.appendChild(mode);$('hist-val').textContent=demo?'DEMO':d.history_count+'回';$('mlp-val').textContent=d.training?'DONE':'N/A';$('modal-timestamp').textContent=(demo?'DEMO':'CSV')+' / '+new Date(d.generated_at).toLocaleTimeString('ja-JP');const lines=['■ データ種別: '+(demo?'架空160回（動作テスト）':'ユーザーCSV '+d.history_count+'回'),'■ 深層学習: '+(d.training?d.training.method+' 検証BCE='+d.training.validation_bce+' / ランダム基準BCE='+d.training.random_baseline_bce:'履歴不足'),'■ 判定モード: '+(d.debate.mode==='llm'?'外部LLM':'ルールベース（LLMではありません）'),''];for(const v of d.debate.first_round)lines.push('独立判定 '+v.agent+': '+v.candidate_id+' / '+v.reason);lines.push('');for(const v of d.debate.second_round)lines.push('反論・再判定 '+v.agent+': '+v.candidate_id+' / '+v.critique);lines.push('','最終支持: '+d.debate.winner_id,'',d.warning);$('ai-verdict-details').textContent=lines.join('\n');addLog('orange','[3AI] '+(demo?'架空履歴を使用したデモ。':'ユーザーCSVを使用。')+'予測候補を検証しました。');for(const v of d.debate.second_round)addLog(v.agent==='LOGOS'?'orange':v.agent==='NEMESIS'?'green':'blue','['+v.agent+'] '+v.candidate_id+'を支持: '+v.reason)}
 /** TRE-UI: POST /api/predictで5通りを生成。通信中の二重実行を防ぎ、失敗時はエラー表示。 */
-async function scanLottery(){const game=$('lottery-select').value;if(game!=='loto7'){$('lottery-result-area').textContent=game==='none'?'抽せん種別を選択してください。':'現在はLOTO7のみ実装済みです。';return}const btn=$('scan-btn');btn.disabled=true;setStatus('ANALYZING...',true);$('lottery-result-area').textContent='統計解析・MLP学習・3AI判定中...';const start=performance.now();try{const response=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:5,samples:180,seed:Math.floor(Math.random()*1000000),session:activeSession,judge:'rules'})});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);renderPrediction(d);setStatus(d.mode==='SYNTHETIC_DEMO'?'ONLINE / DEMO':'ONLINE / CSV',true);$('ping-val').textContent=Math.round(performance.now()-start)+'ms';openLoto7Modal();if(voiceAssistant.awake&&d.candidates.length){const top=d.candidates[0].numbers.map(String).join('、');haroSpeech.say('ロトセブン、予測完了だぞ！ 第1候補は、'+top+'。ハロ！',currentHaro)}}catch(e){setStatus('API ERROR',false);$('lottery-result-area').textContent='予測エラー: '+e.message;addLog('green','[ERROR] '+e.message)}finally{btn.disabled=false}}
-/** TRE-UI: くじ種別変更時の案内を更新。LOTO6とNUMBERS4は未実装。 */
+async function scanLottery(){const game=$('lottery-select').value;if(game!=='loto7'){$('lottery-result-area').textContent=game==='none'?'抽せん種別を選択してください。':'現在はLOTO7のみ実装済みです。';return}const btn=$('scan-btn');btn.disabled=true;setStatus('ANALYZING...',true);$('lottery-result-area').textContent='統計解析・MLP学習・3AI判定中...';const start=performance.now();try{window.dreamLotoLoader.show();window.dreamLotoAlgorithms.begin();const response=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:5,samples:180,seed:Math.floor(Math.random()*1000000),session:activeSession,judge:'rules'})});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);window.dreamLotoAlgorithms.resolve(d);await window.dreamLotoLoader.reveal(d.candidates[0].numbers);renderPrediction(d);setStatus(d.mode==='SYNTHETIC_DEMO'?'ONLINE / DEMO':'ONLINE / CSV',true);$('ping-val').textContent=Math.round(performance.now()-start)+'ms';openLoto7Modal();if(voiceAssistant.awake&&d.candidates.length){const top=d.candidates[0].numbers.map(String).join('、');haroSpeech.say('ロトセブン、予測完了だぞ！ 第1候補は、'+top+'。ハロ！',currentHaro)}}catch(e){setStatus('API ERROR',false);$('lottery-result-area').textContent='予測エラー: '+e.message;addLog('green','[ERROR] '+e.message)}finally{window.dreamLotoAlgorithms.end();window.dreamLotoLoader.hide();btn.disabled=false}}
+/** TRE-UI: くじ種別変更時の案内を更新.LOTO6とNUMBERS4は未実装。 */
 function onLotteryChange(){$('lottery-result-area').textContent=$('lottery-select').value==='loto7'?'LOTO7を選択中。SCANで予測します。':'現在はLOTO7のみ実装済みです。'}
 /** TRE-UI: CSVを最大3MBまでPOST /api/history/uploadに送信して検証。成功時はセッションを保存。 */
-async function uploadCsv(){const input=$('csv-input'),status=$('csv-status');if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}const file=input.files[0];if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}status.textContent='CSVを検証中...';try{const response=await fetch('/api/history/upload',{method:'POST',headers:{'content-type':'text/csv'},body:await file.arrayBuffer()});const d=await response.json();if(!response.ok)throw Error(d.detail||'HTTP '+response.status);activeSession=d.session;sessionStorage.setItem('tre_loto7_session',activeSession);if(d.mode==='MYSQL'){
-  dbBackend='mysql';
-  activeSession=null;
-  sessionStorage.removeItem('tre_loto7_session');
-  status.textContent=d.message+' / 第'+d.last_draw+'回まで';
-  $('db-status').textContent='MySQL 接続済：'+d.count+'回';
-}else{
-  status.textContent=d.count+'件（第'+d.last_draw+'回まで）取込完了。1時間・再起動までのセッションです。';
-}$('hist-val').textContent=d.count+'回';addLog('green','[CSV] '+d.count+'件取込完了。SCANで分析できます。')}catch(e){status.textContent='取込エラー: '+e.message}}
+async function uploadCsv(){
+  const input=$('csv-input'),status=$('csv-status');
+  if(!input.files.length){status.textContent='CSVファイルを選択してください。';return}
+  const file=input.files[0];
+  if(file.size>3000000){status.textContent='CSVは3MB以内です。';return}
+  const headers={'content-type':'text/csv'};
+  if(dbBackend==='mysql'){
+    const token=$('csv-admin-token').value;
+    if(!token){status.textContent='クラウドMySQLへの登録にはDB管理者トークンが必要です。';return}
+    // 管理用トークンはブラウザのlocalStorage/sessionStorageに保存しない。
+    headers.authorization='Bearer '+token;
+  }
+  status.textContent='CSV検証・登録中...';
+  try{
+    const response=await fetch('/api/history/upload',{
+      method:'POST',headers,body:await file.arrayBuffer()});
+    const data=await response.json();
+    if(!response.ok)throw Error(data.detail||'HTTP '+response.status);
+    if(data.mode==='MYSQL'){
+      dbBackend='mysql';activeSession=null;
+      sessionStorage.removeItem('tre_loto7_session');
+      status.textContent=data.message+' / 第'+data.last_draw+'回まで';
+      $('db-status').textContent='クラウドMySQL：'+data.count+'回（永続保存）';
+    }else{
+      activeSession=data.session;
+      sessionStorage.setItem('tre_loto7_session',activeSession);
+      status.textContent=data.count+'件（第'+data.last_draw+'回まで）取込完了。メモリ保存は1時間です。';
+    }
+    $('hist-val').textContent=data.count+'回';
+    addLog('green','[CSV] '+data.count+'件確認。SCANで分析できます。');
+  }catch(error){
+    status.textContent='取込エラー: '+error.message;
+  }finally{
+    // パスワード欄には値を残さない。
+    $('csv-admin-token').value='';
+  }
+}
 /** TRE-UI: CSVセッションを解除し、架空履歴のデモモードに戻す。 */
 function resetDemo(){
   if(dbBackend==='mysql'){
-    $('csv-status').textContent='MySQLに登録した履歴は永続保存されます。デモへ切替えたい場合は公開Render版を使用してください。';
+    $('csv-status').textContent='クラウドMySQLに登録した履歴は永続保存されます。本番DBの履歴を削除・切替える操作はありません。';
     return;
   }
   activeSession=null;sessionStorage.removeItem('tre_loto7_session');$('csv-status').textContent='架空の抽せん履歴で動作デモを実行します。';$('hist-val').textContent='DEMO';addLog('orange','[MODE] デモに戻しました。')}
@@ -803,6 +835,33 @@ const voiceAssistant=new HaroVoiceAssistant();
 voiceAssistant.readCycle=0;
 
 
+/**
+ * LOTO6とNUMBERS4の実履歴件数をクラウドDBから確認する。
+ * 抽せん日の列が元CSVにない場合はNULLとして保存している。
+ * この2種の予測機能は未実装のため、予測成功を装わない。
+ */
+async function refreshAdditionalHistoryStatus(){
+  const target=$('other-game-history-status');
+  if(dbBackend!=='mysql'){
+    target.textContent='LOTO6 / NUMBERS4：クラウドMySQL未接続';
+    return;
+  }
+  try{
+    const games=['LOTO6','NUMBERS4'];
+    const results=await Promise.all(games.map(async game=>{
+      const response=await fetch('/api/history/status/'+game);
+      if(!response.ok)throw Error('HTTP '+response.status);
+      return await response.json();
+    }));
+    target.textContent=results.map((item,i)=>
+      games[i]+' '+item.draw_count+'件（第'+(item.first_draw??'—')+
+      '～'+(item.last_draw??'—')+'回）'
+    ).join(' / ')+' ｜両種の予測は準備中';
+  }catch(error){
+    target.textContent='LOTO6 / NUMBERS4：履歴照会できません（'+error.message+'）';
+  }
+}
+
 /** 起動後にのみ時計とAPI接続確認を開始する。起動前はfetchしない。 */
 async function initializeHaroSystem(){
   const tick=()=>$('telemetry-clock').textContent=new Date().toLocaleTimeString('ja-JP');
@@ -815,16 +874,20 @@ async function initializeHaroSystem(){
     dbBackend=db.backend;
     $('db-status').textContent=
       db.backend==='mysql' ? (
-        db.status==='connected' ? 'MySQL 接続済：'+db.draw_count+'回 / phpMyAdminで管理'
-                                : 'MySQL 接続エラー：XAMPPのMySQLと接続設定を確認'
+        db.status==='connected' ? 'クラウドMySQL 接続済：'+db.draw_count+'回 / 最新回：'+(db.last_draw||'未登録')
+                                : 'クラウドMySQL 接続エラー：RenderのDB環境変数・ネットワークを確認'
       ) : 'DB：メモリモード（公開サイト）';
+    await refreshAdditionalHistoryStatus();
     setStatus(db.status==='unavailable'?'DB OFFLINE':'ONLINE / READY',db.status!=='unavailable');
     $('api-val').textContent='READY';
     $('hist-val').textContent=db.backend==='mysql'?db.draw_count+'回':(activeSession?'SESSION':'DEMO');
     $('mlp-val').textContent='READY';
+    $('csv-admin-wrap').style.display=db.backend==='mysql'?'inline-flex':'none';
     if(db.backend==='mysql'){
       activeSession=null;sessionStorage.removeItem('tre_loto7_session');
-      $('csv-status').textContent='CSVを取り込むとMySQLへ永続保存されます。既存の番号は重複登録しません。';
+      $('csv-status').textContent=db.draw_count>=20
+        ? '保存済みの実際の当せん履歴を使います。CSV取込は管理者トークンが必要です。'
+        : 'MySQLは接続済みですが履歴が20回未満です。CSVを取り込んでください。';
     }else if(activeSession){
       $('csv-status').textContent='CSVセッションを復元しました。有効期限は1時間です。';
     }

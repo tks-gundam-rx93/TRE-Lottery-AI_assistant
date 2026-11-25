@@ -81,6 +81,18 @@ def test_boot_screen_and_pwa_links_remain_in_main_ui():
         assert token in html
 
 
+def test_scan_assets_are_precached_with_the_app_shell():
+    home = client.get("/").text
+    worker = client.get("/service-worker.js").text
+    shell = worker.split("const STATIC_SHELL = [", 1)[1].split("];", 1)[0]
+    for name in ("dream_loto_loading", "algorithm_loading"):
+        for extension in ("css", "js"):
+            asset = f"/assets/{name}.{extension}"
+            assert asset in home
+            assert f"'{asset}'" in shell
+            assert client.get(asset).status_code == 200
+
+
 def test_offline_screen_explains_that_predictions_require_a_server():
     """オフラインで誤った予測を出さないことを表示する。"""
     response = client.get("/offline.html")

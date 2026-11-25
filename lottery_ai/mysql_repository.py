@@ -1,7 +1,7 @@
-"""ローカルXAMPP/MySQL (phpMyAdmin) 用の永続化リポジトリ。
+"""MySQL履歴・予測履歴の永続化（Renderプライベート／外部クラウドDB対応）。
 
-MySQLはWeb APIと同じWindows PC上で稼働させ、利用者のブラウザへDB認証情報を渡さない。
-接続情報は環境変数から読み込み、GitHubにパスワードを保存しない。
+APIのみがDBへ接続する。ブラウザには接続パスワードを渡さない。
+遠隔接続では証明書を検証するTLSを既定とし、明示的なプライベート網だけ無効化可能。
 """
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from dataclasses import dataclass
 import json
 import os
 import re
+import ssl
+from urllib.parse import urlsplit, unquote
 import threading
 import uuid
 from typing import Any
@@ -18,27 +20,56 @@ from .core import Draw
 
 @dataclass(frozen=True)
 class MySqlSettings:
-    """環境ごとにDB接続を切り替える。デフォルトはローカルホスト。"""
+    """DBホストと認証情報は環境変数にのみ保持する。
+
+    LOTTERY_MYSQL_URL の例:
+    mysql+pymysql://app_user:ENCODED_PASSWORD@db.example.com:3306/tre_lottery
+    URLが未指定なら従来の LOTTERY_DB_HOST / USER 等を参照する。
+    """
 
     host: str = "127.0.0.1"
     port: int = 3306
     user: str = "tre_lottery_app"
     password: str = ""
     database: str = "tre_lottery"
+    ssl_mode: str = "verify"
+    ssl_ca: str | None = None
 
     @classmethod
     def from_env(cls) -> "MySqlSettings":
-        database = os.getenv("LOTTERY_DB_NAME", "tre_lottery")
-        if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]{0,63}", database):
-            raise ValueError("LOTTERY_DB_NAMEには英数字とアンダースコアを使ってください")
-        return cls(
-            host=os.getenv("LOTTERY_DB_HOST", "127.0.0.1"),
-            port=int(os.getenv("LOTTERY_DB_PORT", "3306")),
-            user=os.getenv("LOTTERY_DB_USER", "tre_lottery_app"),
-            password=os.getenv("LOTTERY_DB_PASSWORD", ""),
-            database=database,
-        )
+        url = os.getenv("LOTTERY_MYSQL_URL", "").strip()
+        if url:
+            parts = urlsplit(url)
+            if parts.scheme not in ("mysql", "mysql+pymysql"):
+                raise ValueError("LOTTERY_MYSQL_URLはmysql://形式で指定してください")
+            if not parts.hostname or parts.username is None or not parts.path.strip("/"):
+                raise ValueError("MySQL URLにホスト・ユーザー・DB名が必要です")
+            if parts.query or parts.fragment or "/" in parts.path.strip("/"):
+                raise ValueError("MySQL URLのクエリ／追加パスは使えません")
+            host = parts.hostname
+            port = parts.port or 3306
+            user = unquote(parts.username)
+            password = unquote(parts.password or "")
+            database = unquote(parts.path.lstrip("/"))
+        else:
+            host = os.getenv("LOTTERY_DB_HOST", "127.0.0.1").strip()
+            port = int(os.getenv("LOTTERY_DB_PORT", "3306"))
+            user = os.getenv("LOTTERY_DB_USER", "tre_lottery_app").strip()
+            password = os.getenv("LOTTERY_DB_PASSWORD", "")
+            database = os.getenv("LOTTERY_DB_NAME", "tre_lottery").strip()
 
+        if not host or not user or not 1 <= port <= 65535:
+            raise ValueError("MySQLホスト・ユーザー・ポートを確認してください")
+        if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]{0,63}", database):
+            raise ValueError("DB名には英数字とアンダースコアを使ってください")
+        ssl_mode = os.getenv("LOTTERY_DB_SSL_MODE", "verify").strip().lower()
+        if ssl_mode not in ("verify", "disabled"):
+            raise ValueError("LOTTERY_DB_SSL_MODEはverifyまたはdisabledのみ")
+        return cls(
+            host=host, port=port, user=user, password=password, database=database,
+            ssl_mode=ssl_mode,
+            ssl_ca=os.getenv("LOTTERY_DB_SSL_CA") or None,
+        )
 
 class MySqlDrawRepository:
     """既存回の値が一致しない場合は上書きせず拒否する、ロト7の永続リポジトリ。"""
@@ -75,13 +106,18 @@ class MySqlDrawRepository:
     def _connect(self):
         """DBへの接続はバックエンドのみで行い、資格情報を画面へ送らない。"""
         import pymysql
-        return pymysql.connect(
+        kwargs = dict(
             host=self.settings.host, port=self.settings.port,
             user=self.settings.user, password=self.settings.password,
             database=self.settings.database, charset="utf8mb4",
-            connect_timeout=3, read_timeout=10, write_timeout=10,
-            autocommit=False
+            connect_timeout=5, read_timeout=15, write_timeout=15,
+            autocommit=False,
         )
+        if self.settings.ssl_mode == "verify":
+            # クラウドDBのCA証明書とホスト名を厳密に検証。
+            # Render内のプライベートMySQLだけ LOTTERY_DB_SSL_MODE=disabled を指定可能。
+            kwargs["ssl"] = ssl.create_default_context(cafile=self.settings.ssl_ca)
+        return pymysql.connect(**kwargs)
 
     def ensure_schema(self):
         """初回アクセスでCREATE TABLE IF NOT EXISTSを実行（DB自体は事前作成）。"""
@@ -119,6 +155,32 @@ class MySqlDrawRepository:
         finally:
             conn.close()
 
+    def stats(self) -> dict[str, int | str | None]:
+        """履歴の範囲と欠落回号を返す。公開APIでは接続情報を返さない。"""
+        self.ensure_schema()
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*), MIN(draw_no), MAX(draw_no) "
+                    "FROM draw_results WHERE lottery_type=%s", ("LOTO7",)
+                )
+                count, first, last = cursor.fetchone()
+                cursor.execute(
+                    "SELECT draw_no, draw_date FROM draw_results "
+                    "WHERE lottery_type=%s ORDER BY draw_no DESC LIMIT 1", ("LOTO7",)
+                )
+                latest = cursor.fetchone()
+                return {
+                    "count": int(count), "first_draw": int(first) if first is not None else None,
+                    "last_draw": int(last) if last is not None else None,
+                    "last_date": str(latest[1]) if latest else None,
+                    # 途中の欠落回号は明示して点検する（初期導入では第1回からが理想）。
+                    "missing_count": int(last-first+1-count) if first is not None else 0,
+                }
+        finally:
+            conn.close()
+
     def upsert(self, draws: list[Draw], source: str = "CSV") -> int:
         """同一回はスキップ。相違のある既存回は明示エラーとして一括ロールバック。"""
         self.ensure_schema()
@@ -147,6 +209,60 @@ class MySqlDrawRepository:
                     inserted += 1
             conn.commit()
             return inserted
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def upsert_many(self, draws: list[Draw], source: str = "CSV_BULK") -> int:
+        """ロト7履歴をまとめて比較・追加する高速の冪等一括取込。
+
+        703回分の遠隔DBへの往復通信を最小限にするため、先にDB全件を
+        1回のSELECTで読み取り、未登録分だけexecutemanyでINSERTする。
+        既存データと相違が1件でもあればINSERTせず例外・ロールバック。
+        INSERTの重複が並行トランザクションで起きた場合も全件ロールバック。
+        """
+        if not draws:
+            return 0
+        if len({d.draw_no for d in draws}) != len(draws):
+            raise ValueError("取込対象CSVの回号が重複しています")
+        self.ensure_schema()
+        conn = self._connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT draw_no, draw_date, numbers_json, bonus_json "
+                    "FROM draw_results WHERE lottery_type=%s FOR UPDATE", ("LOTO7",)
+                )
+                old = {
+                    int(no): (str(d), str(nums), str(bonus))
+                    for no, d, nums, bonus in cursor.fetchall()
+                }
+                to_insert = []
+                for item in draws:
+                    values = (
+                        str(item.draw_date),
+                        json.dumps(item.numbers),
+                        json.dumps(item.bonus),
+                    )
+                    previous = old.get(item.draw_no)
+                    if previous is not None:
+                        if previous != values:
+                            raise ValueError(f"DBとCSVの第{item.draw_no}回が一致しません")
+                        continue
+                    to_insert.append((
+                        "LOTO7", item.draw_no, *values, source,
+                    ))
+                if to_insert:
+                    cursor.executemany(
+                        "INSERT INTO draw_results "
+                        "(lottery_type, draw_no, draw_date, numbers_json, bonus_json, source) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        to_insert,
+                    )
+            conn.commit()
+            return len(to_insert)
         except Exception:
             conn.rollback()
             raise

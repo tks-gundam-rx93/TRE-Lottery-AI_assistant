@@ -1,7 +1,7 @@
 /* TRE-Lottery PWA: app shell only. Do not cache draw histories or prediction responses. */
 'use strict';
 
-const APP_SHELL_CACHE = 'tre-lottery-shell-20261120-v1';
+const APP_SHELL_CACHE = 'tre-lottery-shell-20261120-v2';
 const STATIC_SHELL = [
   '/',
   '/offline.html',
@@ -10,7 +10,11 @@ const STATIC_SHELL = [
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
   '/icons/apple-touch-icon.png',
-  '/assets/haro-idle.webp'
+  '/assets/haro-idle.webp',
+  '/assets/dream_loto_loading.css',
+  '/assets/dream_loto_loading.js',
+  '/assets/algorithm_loading.css',
+  '/assets/algorithm_loading.js'
 ];
 
 self.addEventListener('install', event => {

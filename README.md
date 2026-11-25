@@ -11,7 +11,7 @@
 - `POST /api/predict` `{"count": 5, "samples": 180, "seed":42, "session":null, "judge":"rules"}`
 - `POST /api/history/upload` `Content-Type: text/csv` のCSV原文。`session`を返す
 
-**公開URLで履歴CSVが未登録の場合、予測は架空160回分の履歴を使用したデモです。** 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
+**DB未接続のデモモードでは架空160回分の履歴を使用します。クラウドMySQLが有効な場合は実際のCSV登録が必要です。** 画面とAPI双方に表示します。データはユーザーのCSVをセッション単位で保持し、1時間またはサーバー再起動で消去されます。Render無料プランでSQLiteファイル永続化は保証されません。
 
 ## ローカル実行
 
@@ -60,25 +60,68 @@ python -m lottery_ai --db data/lottery.db --with-dl
 
 ## GitHub / Render
 
-`main` は基盤用です。専用開発ブランチからPRでコードレビューしてから統合する運用を想定します。
+`main` は方式1の高速GIF UIまでマージ済みです。追加改修は開発ブランチからPRでレビューして統合する運用です。
 RenderのPython Web Service: build `pip install -r requirements.txt`, start `uvicorn app:app --host 0.0.0.0 --port $PORT`。
-## 発表用：ローカルMySQL／phpMyAdmin／iPhone
+## クラウドMySQLに当せん履歴を永続保存（2026-11-20）
 
-発表時はXAMPPのMySQLを使用します。GitHubにDBパスワードは保存しません。
+ローカルXAMPP / `localhost/phpmyadmin` への接続は、通常運用では使用しません。
+**RenderのプライベートMySQL、または外部のクラウドMySQL**へFastAPIから接続する構成です。
 
-1. XAMPPのMySQLとApacheを起動し、`http://localhost/phpmyadmin/` を開く。
-2. `scripts/setup_local_mysql.sql` をphpMyAdminから実行してDBとテーブルを作る。
-3. `tre_lottery_app` を接続元127.0.0.1だけで作成し、`tre_lottery` に必要な権限を与える。
-4. `config/local.env.cmd.example` を `config/local.env.cmd` にコピーし、実際のDBパスワードを設定する。
-5. `python -m pip install -r requirements.txt` 後、`scripts\\start_local.cmd` で起動する。
-6. PCは `http://localhost:8000/`、iPhoneは同じWi-Fiから `http://PCのIPv4:8000/` にアクセスする。
-7. `GET /api/health` の `database.status` が `connected` ならDB接続成功。
+- 接続情報はRender環境変数の `LOTTERY_MYSQL_URL` または `LOTTERY_DB_HOST` / `LOTTERY_DB_USER` / `LOTTERY_DB_PASSWORD` 等に設定（GitHubには含めない）
+- `LOTTERY_DB_BACKEND=mysql` でMySQLを有効化。外部接続はSSL/TLS検証を既定で適用
+- `LOTTERY_ADMIN_TOKEN` を使い、CSVからの永続DB登録を管理者に限定
+- Webの「DRAW HISTORY / CSV IMPORT」から初回全履歴／追加回を登録
+- `GET /api/health` と `GET /api/history/status` で登録件数・最新回・欠落回数を確認
+- MySQLでは20回未満のデータしかなければ**架空デモに自動で切替えない**
+- 予測・3AI判定の結果を `prediction_runs` に保存
 
-**MySQL時の処理:** CSV取込→`draw_results`に重複排除して永続保存→予測実行→`prediction_runs`に予測・判定JSONを保存。MySQLが空で20回未満の場合は架空データによるデモモードを明示します。SQLite用CLIもそのまま利用可能。RenderはMySQLを使わず従来のデモモードです。
+CLIによるCSV初回取込と差分更新：
 
-**起動仕様:** 初期画面では「AIハロ起動」ボタンのみが中央に表示され、押すとメイン画面を公開して「3-AIマルチエージェント・システム、起動。メイン・オレンジ、サブ・グリーン、サブ・パープル、同期完了」と音声合成します。音声認識にはブラウザの許可・HTTPS制約があります。
+```sh
+python -m lottery_ai.cloud_import --csv loto7_history.csv --dry-run
+python -m lottery_ai.cloud_import --csv loto7_history.csv
+```
 
-手順詳細: [docs/local_xampp_iphone.md](docs/local_xampp_iphone.md)
+**重要:** TiDB Cloud StarterのDBは別サービスで作成済みです。資格情報はRender環境変数にのみ保存します。第1〜703回の検証済みCSVをリポジトリに含め、明示的なBootstrap有効化で初回登録します。みずほ銀行の自動取得は接続制限・利用条件の確認が必要なため、未実装です。
+
+手順詳細：[docs/cloud_mysql_history_import.md](docs/cloud_mysql_history_import.md)
+
+## LOTO6 / NUMBERS4の過去データ保存（2026-11-20）
+
+ユーザー提供のCP932 CSVを検証して、LOTO7と独立したテーブルへ取り込む機能を追加。
+
+| 種類 | 収録回 | DBテーブル |
+|---|---|---|
+| LOTO6 | 第1～2156回（2,156件） | `loto6_draw_results` |
+| NUMBERS4 | 第1～6436回（6,436件） | `numbers4_draw_results` |
+
+- LOTO6第2134回の元CSV誤記（本数字`29`→公表番号`19`）を訂正。
+- NUMBERS4は`0097`等の先頭0を保持した文字列`CHAR(4)`で保存。
+- CSVには抽せん日がないため、DBの`draw_date`はNULL。架空の日付を補わない。
+- **NUMBERS4は2024-03-29の第6436回までの部分履歴**で、2026-11-19時点の第7118回まで682回が未収録。
+- 登録用ファイルは`data/*.csv.gz`として保存し、SHA-256を照合。重複回号の再登録を防ぎ、既存値との不一致はロールバックする。
+- 初回のみRenderの`LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES=1`を設定して取込。成功後は`0`に戻す。
+- `GET /api/history/status/LOTO6`、`GET /api/history/status/NUMBERS4`で履歴件数を確認可能。
+- **予測・深層学習・3AI判定はまだLOTO7のみ**。2種類の予測対応は別タスク。
+
+詳細：[docs/loto6_numbers4_import.md](docs/loto6_numbers4_import.md)
+
+## LOTO7実履歴の初回一括登録（2026-11-20）
+
+ユーザー提供の `loto7.csv`（CP932）から、第1～703回の本数字・ボーナス数字を検証し、`data/loto7_history_001_703.csv`（UTF-8）として正規化しました。
+
+- ファイル内の回号は連続・重複なし。日付範囲：2013-04-05～2026-11-13
+- 第483回の元CSV日付が2022-08-13（土）だったため、楽天銀行の公表結果を確認して2022-08-12（金）に訂正
+- **Render環境変数 `LOTTERY_BOOTSTRAP_CSV=1` を設定した場合のみ**、起動時に `tre_lottery.draw_results` へ不足分を一括登録する
+- 登録はトランザクションで原子的に処理し、再デプロイで二重登録しない
+- 本番DBの既存結果と相違がある場合は登録を中断する
+- `GET /api/history/status` で登録後の件数・最終回号・欠落回数を確認できる
+- 元CSVの賞金額・当せん口数は予測履歴テーブルへは登録しない
+- 取込元の703件すべてについて外部公式結果との個別照合を完了したわけではない
+
+来週以降の新規抽せん結果は、管理者認証付きのCSV取込で追加できます。
+
+出典・データ訂正・検査内容: [docs/loto7_history_import_001_703.md](docs/loto7_history_import_001_703.md)
 
 ## ハロ音声の参考動画に基づく調整
 

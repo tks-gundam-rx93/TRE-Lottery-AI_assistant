@@ -5,10 +5,29 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    # プロダクションDBにはアクセスしない。毎回使い捨てMySQL 8を起動して結合テスト。
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: tre_lottery
+          MYSQL_USER: tre_ci
+          MYSQL_PASSWORD: ci_only_password
+          MYSQL_ROOT_PASSWORD: ci_only_root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_only_root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - run: python -m pip install -r requirements.txt pytest httpx
-      - run: python -m pytest -q
+      - name: Unit tests and MySQL integration
+        env:
+          RUN_MYSQL_INTEGRATION: '1'
+        run: python -m pytest -q

@@ -9,6 +9,8 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import json
 import os
+import logging
+import hmac
 from pathlib import Path
 import random
 import tempfile
@@ -27,6 +29,9 @@ from lottery_ai.core import (Candidate, CsvDrawLoader, DeepLearningStrategy, Dra
     FrequencyStrategy, GapPairStrategy, HistoryAnalyzer, MonteCarloStrategy)
 from lottery_ai.deep_numpy import NumpyDeepForecaster
 from lottery_ai.mysql_repository import MySqlSettings, MySqlDrawRepository
+from lottery_ai.cloud_import import Loto7HistoryImporter
+from lottery_ai.bootstrap_history import Loto7HistoryBootstrap
+from lottery_ai.additional_games import AdditionalGameArchive, AdditionalGameRepository
 
 
 class PredictRequest(BaseModel):
@@ -70,7 +75,7 @@ class PredictionService:
     def __init__(self):
         self.sessions = SessionHistoryStore()
         self.demo = self._make_demo(160)
-        # Renderはデモ、ローカル発表は環境変数によってMySQLに切替える。
+        # 公開Render環境ではLOTTERY_DB_BACKEND=mysqlでTiDB Cloudへ接続する。
         # DBの資格情報はブラウザへ一切送信しない。
         self.mysql = (MySqlDrawRepository(MySqlSettings.from_env())
                       if os.getenv('LOTTERY_DB_BACKEND', 'memory').lower() == 'mysql' else None)
@@ -94,11 +99,15 @@ class PredictionService:
             except Exception as exc:
                 raise HTTPException(
                     status_code=503,
-                    detail='MySQLに接続できません。XAMPPのMySQL起動と環境変数を確認してください'
+                    detail='クラウドMySQLに接続できません。TiDB CloudとRender環境変数を確認してください'
                 ) from exc
-            if len(draws) >= 20:
-                return draws, 'MYSQL'
-            # 空DBには架空の抽せん結果を保存しない。
+            if len(draws) < 20:
+                # 本番MySQLモードで架空の結果を混在させない。
+                raise HTTPException(
+                    status_code=409,
+                    detail=f'ロト7履歴が{len(draws)}件です。20回以上の実データCSVをDBに取り込んでください'
+                )
+            return draws, 'MYSQL'
         return self.demo, 'SYNTHETIC_DEMO'
 
     def predict(self, req: PredictRequest) -> dict[str, Any]:
@@ -193,34 +202,192 @@ def pwa_offline_page():
     )
 
 
+@app.on_event("startup")
+def import_verified_loto7_history_on_startup() -> None:
+    """管理者が明示的に有効化したときのみ、第1～703回を初回投入する。
+
+    起動処理にDB資格情報・CSVの各行を書き出さない。既存回の矛盾や
+    接続失敗でも公開UIは停止させず、/api/history/statusで実態を確認できる。
+    """
+    if os.getenv("LOTTERY_BOOTSTRAP_CSV", "").strip() != "1":
+        return
+    if service.mysql is None:
+        logging.getLogger("tre_lottery.import").warning(
+            "history bootstrap skipped: database mode is not enabled"
+        )
+        return
+    try:
+        result = Loto7HistoryBootstrap(service.mysql).run()
+        logging.getLogger("tre_lottery.import").info(
+            "history bootstrap completed: csv_rows=%d inserted=%d skipped=%d db_rows=%d",
+            result["csv_rows"], result["inserted"],
+            result["skipped"], result["db_rows"],
+        )
+    except Exception as exc:
+        # 例外メッセージには接続先・資格情報が入る場合があるため公開しない。
+        logging.getLogger("tre_lottery.import").error(
+            "history bootstrap failed: error_type=%s", type(exc).__name__
+        )
+
+
+
+@app.on_event("startup")
+def import_additional_game_history_on_startup() -> None:
+    """LOTO6とNUMBERS4の検証済み履歴を、明示的な起動フラグがある場合だけDBへ投入。
+
+    別テーブルを利用するためLOTO7履歴や予測結果に一切変更を加えない。
+    例外メッセージは認証情報が含まれる可能性があるため公開しない。
+    """
+    if os.getenv("LOTTERY_BOOTSTRAP_ADDITIONAL_GAMES", "").strip() != "1":
+        return
+    if service.mysql is None:
+        logging.getLogger("tre_lottery.additional_import").warning(
+            "additional games import skipped: MySQL disabled"
+        )
+        return
+    reader = AdditionalGameArchive()
+    repository = AdditionalGameRepository(service.mysql)
+    for game in ("LOTO6", "NUMBERS4"):
+        try:
+            draws = reader.load(game)
+            result = repository.import_draws(game, draws)
+            logging.getLogger("tre_lottery.additional_import").info(
+                "additional game import OK: game=%s rows=%d inserted=%d skipped=%d total=%d",
+                game, result["rows_in_file"], result["inserted"],
+                result["skipped"], result["db_rows"],
+            )
+        except Exception as exc:
+            logging.getLogger("tre_lottery.additional_import").error(
+                "additional game import failed: game=%s error_type=%s",
+                game, type(exc).__name__,
+            )
+
+
 @app.get('/')
 def home():
     return FileResponse(Path(__file__).parent / 'web' / 'index.html', media_type='text/html')
 
 
+def _safe_db_error_code(exc: Exception) -> str:
+    """DB資格情報や接続先を露出させず、エラーの種類だけを分類する。"""
+    message = str(exc).lower()
+    if "certificate verify failed" in message or "certificate_verify_failed" in message:
+        return "tls_certificate"
+    if "ssl" in message or "tls" in message:
+        return "tls_handshake"
+    if "access denied" in message or "authentication" in message:
+        return "authentication"
+    if "unknown database" in message:
+        return "database_missing"
+    if "name or service not known" in message or "getaddrinfo" in message:
+        return "dns"
+    if "timed out" in message or "timeout" in message:
+        return "timeout"
+    args = getattr(exc, 'args', ())
+    code = args[0] if args and isinstance(args[0], int) else None
+    if code == 1045:
+        return "authentication"
+    if code == 1049:
+        return "database_missing"
+    if code in (2003, 2005):
+        return "network"
+    if code in (1044, 1142):
+        return "permission"
+    return "driver_or_query"
+
+
 @app.get('/api/health')
 def health():
-    # DBが未起動でもAPIプロセスを止めず、UIに接続状態を返す。
+    """MySQLの実接続状態と保存済み回号を公開。接続情報や秘密は返さない。"""
     db_state = 'disabled'
-    rows = 0
+    db_error_type = None
+    db_error_code = None
+    summary = {'count': 0, 'first_draw': None, 'last_draw': None, 'last_date': None, 'missing_count': 0}
     if service.mysql is not None:
         try:
-            rows = len(service.mysql.all())
+            summary = service.mysql.stats() if hasattr(service.mysql, 'stats') else dict(
+                count=len(service.mysql.all()), first_draw=None, last_draw=None,
+                last_date=None, missing_count=0)
             db_state = 'connected'
-        except Exception:
+        except Exception as exc:
             db_state = 'unavailable'
-    return {'status': 'ok', 'game': 'LOTO7',
-            'history_mode': 'MYSQL' if db_state == 'connected' and rows >= 20 else 'SYNTHETIC_DEMO',
+            db_error_type = type(exc).__name__
+            db_error_code = _safe_db_error_code(exc)
+    history_mode = ('MYSQL' if db_state == 'connected' and summary['count'] >= 20
+                    else 'MYSQL_WAITING' if service.mysql is not None else 'SYNTHETIC_DEMO')
+    return {'status': 'ok', 'game': 'LOTO7', 'history_mode': history_mode,
             'database': {'backend': 'mysql' if service.mysql is not None else 'memory',
-                         'status': db_state, 'draw_count': rows},
+                         'status': db_state, 'draw_count': summary['count'],
+                         'first_draw': summary['first_draw'], 'last_draw': summary['last_draw'],
+                         'last_date': summary['last_date'],
+                         'missing_count': summary['missing_count'],
+                         'error_type': db_error_type, 'error_code': db_error_code},
             'learning': 'numpy_mlp', 'three_agents': 'rules; llm optional',
             'upload_storage': 'MySQL persistent' if service.mysql is not None
                               else 'one-hour in-memory session'}
 
 
+@app.get('/api/history/status')
+def history_status():
+    """登録済みの抽せん履歴件数・初回/最新回を確認する。管理操作は含まない。"""
+    if service.mysql is None:
+        return {'mode': 'memory', 'persistent': False, 'draw_count': 0}
+    try:
+        stats = (service.mysql.stats() if hasattr(service.mysql, 'stats')
+                 else {'count': len(service.mysql.all())})
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail='MySQLへの接続に失敗しました') from exc
+    return {'mode': 'MYSQL', 'persistent': True, 'draw_count': stats['count'],
+            'first_draw': stats.get('first_draw'), 'last_draw': stats.get('last_draw'),
+            'last_date': stats.get('last_date'), 'missing_count': stats.get('missing_count', 0)}
+
+
+@app.get('/api/history/status/{game}')
+def additional_history_status(game: str):
+    """宝くじ種類ごとのDB履歴件数。LOTO7の既存APIは互換性維持。"""
+    game = game.upper()
+    if game == "LOTO7":
+        return history_status()
+    if game not in ("LOTO6", "NUMBERS4"):
+        raise HTTPException(status_code=404, detail="未対応の宝くじ種類です")
+    if service.mysql is None:
+        return {'game': game, 'mode': 'memory', 'persistent': False, 'draw_count': 0}
+    try:
+        stats = AdditionalGameRepository(service.mysql).stats(game)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="クラウドMySQLへの接続・照会に失敗しました") from exc
+    return {
+        'game': game,
+        'mode': 'MYSQL',
+        'persistent': True,
+        'draw_count': stats['count'],
+        'first_draw': stats['first_draw'],
+        'last_draw': stats['last_draw'],
+        'missing_count': stats['missing_count'],
+        'dates_available': stats['dates_available'],
+        'prediction_available': False,
+    }
+
+
+def _require_import_admin(request: Request) -> None:
+    """クラウドMySQLへ永続書込するCSV取込を管理者認証で保護する。"""
+    expected = os.getenv('LOTTERY_ADMIN_TOKEN', '')
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail='クラウド取込が未設定です。管理者トークンをRenderの環境変数へ設定してください'
+        )
+    provided = request.headers.get('authorization', '')
+    if not provided.startswith('Bearer '):
+        raise HTTPException(status_code=401, detail='管理者トークンが必要です')
+    if not hmac.compare_digest(provided[7:].encode(), expected.encode()):
+        raise HTTPException(status_code=403, detail='管理者トークンが一致しません')
+
 @app.post('/api/history/upload')
 async def upload_csv(request: Request):
-    """公式CSV直リンクを呼ばず、利用者のCSVを読み込む。最大3MB。"""
+    """CSVから当せん履歴を登録。クラウドMySQLへの書込時は管理者認証が必須。"""
+    if service.mysql is not None:
+        _require_import_admin(request)
     payload = await request.body()
     if not payload or len(payload) > 3_000_000:
         raise HTTPException(status_code=413, detail='CSVは3MB以下にしてください')
@@ -228,13 +395,15 @@ async def upload_csv(request: Request):
         temp.write(payload)
         filepath = temp.name
     try:
-        draws = CsvDrawLoader().load(filepath)
+        # 本番MySQLのみ抽せん日の実在性を検証。デモの既存CSV互換性は維持する。
+        draws = (Loto7HistoryImporter(service.mysql).load_and_validate(filepath)
+                 if service.mysql is not None else CsvDrawLoader().load(filepath))
     except (ValueError, UnicodeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     finally:
         Path(filepath).unlink(missing_ok=True)
-    if len(draws) < 20:
-        raise HTTPException(status_code=422, detail='20回以上の履歴が必要です')
+    if service.mysql is None and len(draws) < 20:
+        raise HTTPException(status_code=422, detail='デモ予測には20回以上の履歴が必要です')
     if service.mysql is not None:
         try:
             inserted = service.mysql.upsert(draws, 'CSV')
